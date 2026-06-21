@@ -10,7 +10,7 @@ import { redirect } from 'next/navigation'
  */
 const DEMO_USER = 'Admin'
 const DEMO_PASSWORD = 'Admin123'
-const SESSION_COOKIE = 'zenspa_session'
+const SESSION_COOKIE = 'spaandco_session'
 
 export interface LoginState {
   error?: string

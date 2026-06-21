@@ -30,7 +30,7 @@ export default function LoginPage() {
           <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-md bg-primary-600">
             <Sparkles className="h-6 w-6 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">ZenSpa ERP</h1>
+          <h1 className="text-2xl font-bold text-slate-900">Spa and Co</h1>
           <p className="mt-1 text-sm text-stone-500">Gestion de spa & bien-être</p>
         </div>
 

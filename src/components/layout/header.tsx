@@ -1,10 +1,13 @@
-import { logout } from '@/lib/auth'
-import { Bell, LogOut, Search } from 'lucide-react'
+import { Bell, Search } from 'lucide-react'
+import { MobileNav } from './mobile-nav'
 
 export function Header({ title }: { title: string }) {
   return (
-    <header className="flex h-16 shrink-0 items-center justify-between border-b border-stone-200 bg-white px-6">
-      <h1 className="text-lg font-semibold text-slate-900">{title}</h1>
+    <header className="flex h-16 shrink-0 items-center justify-between border-b border-stone-200 bg-white px-4 sm:px-6">
+      <div className="flex items-center gap-2">
+        <MobileNav />
+        <h1 className="text-lg font-semibold text-slate-900">{title}</h1>
+      </div>
 
       <div className="flex items-center gap-4">
         <div className="hidden items-center gap-2 rounded-md border border-stone-200 px-3 py-1.5 text-sm text-stone-400 md:flex">
@@ -25,15 +28,6 @@ export function Header({ title }: { title: string }) {
             <p className="font-medium text-slate-900">Administrateur</p>
             <p className="text-xs text-stone-400">Admin Général</p>
           </div>
-          <form action={logout}>
-            <button
-              type="submit"
-              title="Déconnexion"
-              className="rounded-md p-2 text-stone-500 hover:bg-rose-50 hover:text-rose-600 cursor-pointer"
-            >
-              <LogOut className="h-4 w-4" />
-            </button>
-          </form>
         </div>
       </div>
     </header>

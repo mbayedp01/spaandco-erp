@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'ZenSpa ERP',
+  title: 'Spa and Co',
   description: 'Gestion complète de spas et centres de bien-être',
 }
 
