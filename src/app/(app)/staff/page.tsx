@@ -1,40 +1,39 @@
 import { Header } from '@/components/layout/header'
-import { staff } from '@/lib/mock-data'
+import { getStaff } from '@/lib/db/staff'
+import { getTodayAppointments } from '@/lib/db/appointments'
 import { cn } from '@/lib/utils'
 import { UserCheck, UserX, Palmtree, Plus, Star } from 'lucide-react'
 
-const statusConfig = {
-  active: { label: 'Actif', className: 'bg-emerald-50 text-emerald-700' },
+const statusConfig: Record<string, { label: string; className: string }> = {
+  active: { label: 'Actif',  className: 'bg-emerald-50 text-emerald-700' },
   absent: { label: 'Absent', className: 'bg-rose-50 text-rose-700' },
-  conge: { label: 'Congé', className: 'bg-amber-50 text-amber-700' },
+  conge:  { label: 'Congé',  className: 'bg-amber-50 text-amber-700' },
 }
 
 const roleColor: Record<string, string> = {
-  Thérapeute: 'bg-primary-50 text-primary-700',
-  Réceptionniste: 'bg-purple-50 text-purple-700',
-  Manager: 'bg-slate-100 text-slate-700',
-  Esthéticienne: 'bg-pink-50 text-pink-700',
+  'Thérapeute':    'bg-primary-50 text-primary-700',
+  'Réceptionniste':'bg-purple-50 text-purple-700',
+  'Manager':       'bg-slate-100 text-slate-700',
+  'Esthéticienne': 'bg-pink-50 text-pink-700',
 }
 
-const ratings: Record<string, number> = {
-  '1': 4.9,
-  '2': 4.7,
-  '3': 4.8,
-  '6': 4.6,
-  '7': 4.5,
-}
+export default async function StaffPage() {
+  const [staffList, todayAppts] = await Promise.all([getStaff(), getTodayAppointments()])
 
-export default function StaffPage() {
-  const active = staff.filter((s) => s.status === 'active').length
-  const absent = staff.filter((s) => s.status === 'absent').length
-  const conge = staff.filter((s) => s.status === 'conge').length
-  const totalSalary = staff.reduce((sum, s) => sum + s.salary, 0)
+  const rdvCounts: Record<string, number> = {}
+  for (const a of todayAppts) {
+    if (a.staff_name) rdvCounts[a.staff_name] = (rdvCounts[a.staff_name] ?? 0) + 1
+  }
+
+  const active     = staffList.filter((s) => s.status === 'active').length
+  const absent     = staffList.filter((s) => s.status === 'absent').length
+  const conge      = staffList.filter((s) => s.status === 'conge').length
+  const totalSalary = staffList.reduce((sum, s) => sum + (s.salary ?? 0), 0)
 
   return (
     <>
       <Header title="Gestion du personnel" />
       <div className="flex-1 overflow-y-auto p-6">
-        {/* KPIs */}
         <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
           <div className="flex items-center gap-4 rounded-lg border border-stone-200 bg-white p-5 shadow-xs">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-50">
@@ -70,10 +69,9 @@ export default function StaffPage() {
           </div>
         </div>
 
-        {/* Table */}
         <div className="rounded-lg border border-stone-200 bg-white shadow-xs">
           <div className="flex items-center justify-between border-b border-stone-200 px-5 py-4">
-            <h2 className="font-semibold text-slate-900">Équipe ({staff.length} membres)</h2>
+            <h2 className="font-semibold text-slate-900">Équipe ({staffList.length} membres)</h2>
             <button className="flex items-center gap-2 rounded-md bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700 cursor-pointer">
               <Plus className="h-4 w-4" />
               Ajouter
@@ -93,45 +91,44 @@ export default function StaffPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-stone-100">
-                {staff.map((member) => {
-                  const sc = statusConfig[member.status]
-                  const rating = ratings[member.id]
+                {staffList.map((member) => {
+                  const sc = statusConfig[member.status] ?? statusConfig.active
+                  const fullName = `${member.first_name} ${member.last_name}`
+                  const rdv = rdvCounts[fullName] ?? 0
                   return (
                     <tr key={member.id} className="hover:bg-stone-50">
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-3">
                           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-100 text-sm font-semibold text-primary-700">
-                            {member.firstName[0]}
+                            {member.first_name[0]}
                           </div>
                           <div>
-                            <p className="font-medium text-slate-900">{member.firstName} {member.lastName}</p>
+                            <p className="font-medium text-slate-900">{fullName}</p>
                             <p className="text-xs text-stone-400">{member.email}</p>
                           </div>
                         </div>
                       </td>
                       <td className="px-5 py-3.5">
-                        <span className={cn('rounded-full px-2.5 py-0.5 text-xs font-medium', roleColor[member.role])}>
+                        <span className={cn('rounded-full px-2.5 py-0.5 text-xs font-medium', roleColor[member.role] ?? 'bg-stone-100 text-stone-600')}>
                           {member.role}
                         </span>
                       </td>
                       <td className="hidden px-5 py-3.5 text-xs text-stone-500 md:table-cell">{member.specialty}</td>
                       <td className="hidden px-5 py-3.5 sm:table-cell">
-                        <span className={cn('font-medium', member.rdvCount > 0 ? 'text-primary-700' : 'text-stone-300')}>
-                          {member.rdvCount > 0 ? `${member.rdvCount}` : '—'}
+                        <span className={cn('font-medium', rdv > 0 ? 'text-primary-700' : 'text-stone-300')}>
+                          {rdv > 0 ? rdv : '—'}
                         </span>
                       </td>
                       <td className="hidden px-5 py-3.5 lg:table-cell">
-                        {rating ? (
-                          <span className="flex items-center gap-1 text-amber-500">
-                            <Star className="h-3.5 w-3.5 fill-amber-400" />
-                            <span className="text-sm font-medium text-slate-900">{rating}</span>
+                        {member.rating ? (
+                          <span className="flex items-center gap-1">
+                            <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                            <span className="text-sm font-medium text-slate-900">{member.rating}</span>
                           </span>
-                        ) : (
-                          <span className="text-stone-300">—</span>
-                        )}
+                        ) : <span className="text-stone-300">—</span>}
                       </td>
                       <td className="hidden px-5 py-3.5 font-medium text-slate-900 lg:table-cell">
-                        {member.salary.toLocaleString('fr-FR')} F
+                        {member.salary ? `${member.salary.toLocaleString('fr-FR')} F` : '—'}
                       </td>
                       <td className="px-5 py-3.5">
                         <span className={cn('rounded-full px-2.5 py-0.5 text-xs font-medium', sc.className)}>

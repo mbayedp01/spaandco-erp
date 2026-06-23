@@ -1,7 +1,9 @@
 import { Header } from '@/components/layout/header'
 import { KpiCard } from '@/components/dashboard/kpi-card'
 import { RevenueChart, ServicesChart } from '@/components/dashboard/charts'
-import { kpis, topServices, todayAppointments, staff } from '@/lib/mock-data'
+import { kpis, topServices } from '@/lib/mock-data'
+import { getTodayAppointments } from '@/lib/db/appointments'
+import { getStaff } from '@/lib/db/staff'
 import { cn } from '@/lib/utils'
 import { CalendarDays, Users, UserCheck } from 'lucide-react'
 
@@ -21,7 +23,11 @@ const statusLabel: Record<string, string> = {
   cancelled: 'Annulé',
 }
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  const [todayAppointments, staff] = await Promise.all([
+    getTodayAppointments(),
+    getStaff(),
+  ])
   const activeStaff = staff.filter((s) => s.status === 'active').length
 
   return (
@@ -39,7 +45,7 @@ export default function DashboardPage() {
         <div className="mt-4 grid grid-cols-3 gap-4">
           {[
             { icon: CalendarDays, label: 'RDV confirmés', value: todayAppointments.filter((a) => a.status === 'confirmed').length, color: 'text-primary-600 bg-primary-50' },
-            { icon: Users, label: 'Clients servis', value: new Set(todayAppointments.filter(a => a.status === 'completed').map(a => a.client)).size, color: 'text-emerald-600 bg-emerald-50' },
+            { icon: Users, label: 'Clients servis', value: new Set(todayAppointments.filter(a => a.status === 'completed').map(a => a.client_name)).size, color: 'text-emerald-600 bg-emerald-50' },
             { icon: UserCheck, label: 'Personnel actif', value: activeStaff, color: 'text-amber-600 bg-amber-50' },
           ].map((m) => {
             const Icon = m.icon
@@ -92,24 +98,30 @@ export default function DashboardPage() {
               {todayAppointments.length} RDV
             </span>
           </div>
-          <div className="divide-y divide-stone-100">
-            {todayAppointments.map((a) => (
-              <div key={a.id} className="flex items-center gap-4 px-5 py-3 text-sm">
-                <span className="w-14 font-medium text-slate-900">{a.time}</span>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-slate-900 truncate">{a.client}</p>
-                  <p className="text-xs text-stone-400 truncate">{a.service} · {a.therapist}</p>
+          {todayAppointments.length === 0 ? (
+            <div className="px-5 py-8 text-center text-sm text-stone-400">
+              Aucun rendez-vous aujourd&apos;hui
+            </div>
+          ) : (
+            <div className="divide-y divide-stone-100">
+              {todayAppointments.map((a) => (
+                <div key={a.id} className="flex items-center gap-4 px-5 py-3 text-sm">
+                  <span className="w-14 font-medium text-slate-900">{a.time}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-slate-900 truncate">{a.client_name}</p>
+                    <p className="text-xs text-stone-400 truncate">{a.service_name} · {a.staff_name}</p>
+                  </div>
+                  <span className="hidden text-stone-500 sm:block">{a.duration} min</span>
+                  <span className="hidden w-24 text-right font-medium text-slate-900 sm:block">
+                    {(a.price ?? 0).toLocaleString('fr-FR')} F
+                  </span>
+                  <span className={cn('rounded-full px-2.5 py-0.5 text-xs font-medium', statusStyle[a.status] ?? 'bg-stone-100 text-stone-600')}>
+                    {statusLabel[a.status] ?? a.status}
+                  </span>
                 </div>
-                <span className="hidden text-stone-500 sm:block">{a.duration} min</span>
-                <span className="hidden w-24 text-right font-medium text-slate-900 sm:block">
-                  {a.price.toLocaleString('fr-FR')} F
-                </span>
-                <span className={cn('rounded-full px-2.5 py-0.5 text-xs font-medium', statusStyle[a.status])}>
-                  {statusLabel[a.status]}
-                </span>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </>

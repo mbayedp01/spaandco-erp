@@ -15,7 +15,7 @@ import {
   BarChart,
   Bar,
 } from 'recharts'
-import { revenueByMonth, topServices, staffPerformance } from '@/lib/mock-data'
+import { revenueByMonth, topServices, staffPerformance, expenseCategories, campaigns } from '@/lib/mock-data'
 
 const PIE_COLORS = ['#0D9488', '#14B8A6', '#5EEAD4', '#F59E0B', '#CBD5E1']
 
@@ -77,6 +77,71 @@ export function ServicesPieChart() {
           formatter={(v) => <span style={{ fontSize: 11, color: '#64748b' }}>{v}</span>}
         />
       </PieChart>
+    </ResponsiveContainer>
+  )
+}
+
+export function ComptaBarChart() {
+  return (
+    <ResponsiveContainer width="100%" height={260}>
+      <BarChart data={revenueByMonth} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+        <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+        <YAxis tickFormatter={fmt} tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={44} />
+        <Tooltip
+          formatter={(v: number, name: string) => [`${v.toLocaleString('fr-FR')} F`, name === 'ca' ? 'CA' : name === 'depenses' ? 'Dépenses' : 'Bénéfice']}
+          contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e7e5e4' }}
+        />
+        <Legend iconType="circle" iconSize={8} formatter={(v) => <span style={{ fontSize: 11, color: '#64748b' }}>{v === 'ca' ? 'CA' : v === 'depenses' ? 'Dépenses' : 'Bénéfice'}</span>} />
+        <Bar dataKey="ca" fill="#0D9488" radius={[4, 4, 0, 0]} barSize={14} name="ca" />
+        <Bar dataKey="depenses" fill="#F59E0B" radius={[4, 4, 0, 0]} barSize={14} name="depenses" />
+      </BarChart>
+    </ResponsiveContainer>
+  )
+}
+
+export function ExpensePieChart() {
+  return (
+    <ResponsiveContainer width="100%" height={220}>
+      <PieChart>
+        <Pie
+          data={expenseCategories}
+          cx="50%"
+          cy="50%"
+          innerRadius={52}
+          outerRadius={82}
+          paddingAngle={3}
+          dataKey="percent"
+          nameKey="name"
+        >
+          {expenseCategories.map((e, i) => (
+            <Cell key={i} fill={e.color} />
+          ))}
+        </Pie>
+        <Tooltip formatter={(v: number, name: string) => [`${v}%`, name]} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
+        <Legend iconType="circle" iconSize={8} formatter={(v) => <span style={{ fontSize: 11, color: '#64748b' }}>{v}</span>} />
+      </PieChart>
+    </ResponsiveContainer>
+  )
+}
+
+export function CampaignBarChart() {
+  const data = campaigns.map((c) => ({
+    name: c.name.length > 18 ? c.name.slice(0, 16) + '…' : c.name,
+    Envoyés: c.sent,
+    Ouverts: c.opened,
+  }))
+  return (
+    <ResponsiveContainer width="100%" height={220}>
+      <BarChart data={data} layout="vertical" margin={{ top: 0, right: 16, left: 0, bottom: 0 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+        <XAxis type="number" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+        <YAxis type="category" dataKey="name" tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} width={120} />
+        <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e7e5e4' }} />
+        <Legend iconType="circle" iconSize={8} formatter={(v) => <span style={{ fontSize: 11, color: '#64748b' }}>{v}</span>} />
+        <Bar dataKey="Envoyés" fill="#0D9488" radius={[0, 4, 4, 0]} barSize={10} />
+        <Bar dataKey="Ouverts" fill="#5EEAD4" radius={[0, 4, 4, 0]} barSize={10} />
+      </BarChart>
     </ResponsiveContainer>
   )
 }

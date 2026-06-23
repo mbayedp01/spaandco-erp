@@ -1,7 +1,11 @@
 import { Header } from '@/components/layout/header'
-import { staff, appointments, weekDays, TODAY_INDEX } from '@/lib/mock-data'
+import { createServerClient } from '@/lib/supabase/server'
+import { getStaff } from '@/lib/db/staff'
+import type { Database } from '@/lib/supabase/types'
 import { cn } from '@/lib/utils'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+
+type Appointment = Database['public']['Tables']['appointments']['Row']
 
 const statusDot: Record<string, string> = {
   confirmed: 'bg-primary-500',
@@ -10,11 +14,56 @@ const statusDot: Record<string, string> = {
   cancelled: 'bg-rose-400',
 }
 
-const therapists = staff.filter((s) => s.role === 'Thérapeute' || s.role === 'Esthéticienne')
+const DAY_NAMES = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
 
-export default function PlanningPage() {
-  const totalRdv = appointments.filter((a) => a.status !== 'cancelled').length
-  const workingDays = weekDays.slice(0, 6)
+function getWeekDates() {
+  const now = new Date()
+  const dow = now.getDay()
+  const monday = new Date(now)
+  monday.setDate(now.getDate() + (dow === 0 ? -6 : 1 - dow))
+  return Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(monday)
+    d.setDate(monday.getDate() + i)
+    return {
+      short: DAY_NAMES[i],
+      date: d.getDate(),
+      iso: d.toISOString().split('T')[0],
+    }
+  })
+}
+
+async function getWeekAppointments(start: string, end: string): Promise<Appointment[]> {
+  const supabase = createServerClient()
+  const { data, error } = await supabase
+    .from('appointments')
+    .select('*')
+    .gte('date', start)
+    .lte('date', end)
+    .order('time')
+  if (error) console.error('getWeekAppointments:', error.message)
+  return (data as Appointment[] | null) ?? []
+}
+
+export default async function PlanningPage() {
+  const weekDays = getWeekDates()
+  const today = new Date().toISOString().split('T')[0]
+  const todayIndex = weekDays.findIndex(d => d.iso === today)
+
+  const [staff, weekAppointments] = await Promise.all([
+    getStaff(),
+    getWeekAppointments(weekDays[0].iso, weekDays[5].iso),
+  ])
+
+  const therapists = staff.filter(s => s.role === 'Thérapeute' || s.role === 'Esthéticienne')
+  const totalRdv = weekAppointments.filter(a => a.status !== 'cancelled').length
+
+  const weekLabel = (() => {
+    const start = new Date(weekDays[0].iso)
+    const end = new Date(weekDays[5].iso)
+    const fmtDay = (d: Date) => d.getDate()
+    const fmtMonth = (d: Date) => d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
+    return `${fmtDay(start)} – ${fmtDay(end)} ${fmtMonth(end)}`
+  })()
 
   return (
     <>
@@ -28,7 +77,7 @@ export default function PlanningPage() {
                 <ChevronLeft className="h-4 w-4" />
               </button>
               <span className="border-x border-stone-200 px-4 py-1.5 text-sm font-medium text-slate-900">
-                16 – 22 juin 2026
+                {weekLabel}
               </span>
               <button className="p-2 text-stone-500 hover:bg-stone-50 cursor-pointer">
                 <ChevronRight className="h-4 w-4" />
@@ -39,10 +88,12 @@ export default function PlanningPage() {
             </button>
           </div>
           <div className="flex items-center gap-4 text-xs text-stone-500">
-            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-primary-500 inline-block" />Confirmé</span>
-            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-amber-400 inline-block" />En attente</span>
-            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-stone-400 inline-block" />Terminé</span>
-            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-rose-400 inline-block" />Annulé</span>
+            {Object.entries({ confirmed: ['bg-primary-500', 'Confirmé'], pending: ['bg-amber-400', 'En attente'], completed: ['bg-stone-400', 'Terminé'], cancelled: ['bg-rose-400', 'Annulé'] }).map(([k, [cls, label]]) => (
+              <span key={k} className="flex items-center gap-1.5">
+                <span className={cn('h-2 w-2 rounded-full inline-block', cls)} />
+                {label}
+              </span>
+            ))}
           </div>
         </div>
 
@@ -50,9 +101,9 @@ export default function PlanningPage() {
         <div className="mb-5 grid grid-cols-2 gap-4 sm:grid-cols-4">
           {[
             { label: 'RDV cette semaine', value: totalRdv },
-            { label: 'Thérapeutes actifs', value: therapists.filter((t) => t.status === 'active').length },
-            { label: 'Heures planifiées', value: `${appointments.filter(a => a.status !== 'cancelled').reduce((s, a) => s + a.duration, 0) / 60 | 0}h` },
-            { label: 'Taux de remplissage', value: '74%' },
+            { label: 'Thérapeutes actifs', value: therapists.filter(t => t.status === 'active').length },
+            { label: 'Heures planifiées', value: `${Math.floor(weekAppointments.filter(a => a.status !== 'cancelled').reduce((s, a) => s + (a.duration ?? 0), 0) / 60)}h` },
+            { label: 'Taux de remplissage', value: `${Math.min(100, Math.round(totalRdv / Math.max(1, therapists.length * 6) * 100 * 3))}%` },
           ].map((k) => (
             <div key={k.label} className="rounded-lg border border-stone-200 bg-white p-4 shadow-xs">
               <p className="text-xs text-stone-500">{k.label}</p>
@@ -69,23 +120,15 @@ export default function PlanningPage() {
               <div className="border-r border-stone-200 px-4 py-3 text-xs font-medium text-stone-400">
                 Thérapeute
               </div>
-              {workingDays.map((d, i) => (
+              {weekDays.map((d, i) => (
                 <div
                   key={d.short}
-                  className={cn(
-                    'border-r border-stone-200 px-3 py-3 text-center last:border-r-0',
-                    i === TODAY_INDEX && 'bg-primary-50'
-                  )}
+                  className={cn('border-r border-stone-200 px-3 py-3 text-center last:border-r-0', i === todayIndex && 'bg-primary-50')}
                 >
-                  <p className={cn('text-xs', i === TODAY_INDEX ? 'text-primary-600 font-semibold' : 'text-stone-400')}>
+                  <p className={cn('text-xs', i === todayIndex ? 'text-primary-600 font-semibold' : 'text-stone-400')}>
                     {d.short}
                   </p>
-                  <span
-                    className={cn(
-                      'flex h-7 w-7 mx-auto items-center justify-center rounded-full text-sm font-semibold',
-                      i === TODAY_INDEX ? 'bg-primary-600 text-white' : 'text-slate-900'
-                    )}
-                  >
+                  <span className={cn('flex h-7 w-7 mx-auto items-center justify-center rounded-full text-sm font-semibold', i === todayIndex ? 'bg-primary-600 text-white' : 'text-slate-900')}>
                     {d.date}
                   </span>
                 </div>
@@ -95,22 +138,19 @@ export default function PlanningPage() {
             {/* Lignes thérapeutes */}
             {therapists.map((t) => {
               const isAbsent = t.status !== 'active'
+              const fullName = `${t.first_name} ${t.last_name}`
               return (
                 <div
                   key={t.id}
-                  className={cn(
-                    'grid border-b border-stone-100 last:border-b-0',
-                    isAbsent && 'opacity-50'
-                  )}
+                  className={cn('grid border-b border-stone-100 last:border-b-0', isAbsent && 'opacity-50')}
                   style={{ gridTemplateColumns: '160px repeat(6, 1fr)' }}
                 >
-                  {/* Nom thérapeute */}
                   <div className="flex items-center gap-2 border-r border-stone-100 px-4 py-3">
                     <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-100 text-xs font-bold text-primary-700">
-                      {t.firstName[0]}
+                      {t.first_name[0]}
                     </div>
                     <div className="min-w-0">
-                      <p className="truncate text-xs font-medium text-slate-900">{t.firstName}</p>
+                      <p className="truncate text-xs font-medium text-slate-900">{t.first_name}</p>
                       <p className="truncate text-[10px] text-stone-400">{t.role}</p>
                     </div>
                     {isAbsent && (
@@ -120,18 +160,12 @@ export default function PlanningPage() {
                     )}
                   </div>
 
-                  {/* Cellules par jour */}
-                  {workingDays.map((_, dayIdx) => {
-                    const dayAppts = appointments.filter(
-                      (a) => a.therapist === `${t.firstName} ${t.lastName}` && a.day === dayIdx
-                    )
+                  {weekDays.map((day, dayIdx) => {
+                    const dayAppts = weekAppointments.filter(a => a.staff_name === fullName && a.date === day.iso)
                     return (
                       <div
                         key={dayIdx}
-                        className={cn(
-                          'border-r border-stone-100 px-2 py-2.5 last:border-r-0',
-                          dayIdx === TODAY_INDEX && 'bg-primary-50/30'
-                        )}
+                        className={cn('border-r border-stone-100 px-2 py-2.5 last:border-r-0', dayIdx === todayIndex && 'bg-primary-50/30')}
                       >
                         {isAbsent ? (
                           <div className="flex h-full items-center justify-center">
@@ -153,11 +187,11 @@ export default function PlanningPage() {
                                   a.status === 'completed' && 'bg-stone-100 text-stone-600',
                                   a.status === 'cancelled' && 'bg-rose-50 text-rose-700 line-through opacity-70'
                                 )}
-                                title={`${a.time} · ${a.client} · ${a.service}`}
+                                title={`${a.time} · ${a.client_name} · ${a.service_name}`}
                               >
-                                <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full', statusDot[a.status])} />
+                                <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full', statusDot[a.status] ?? 'bg-stone-400')} />
                                 <span className="font-medium">{a.time}</span>
-                                <span className="truncate">{a.client.split(' ')[0]}</span>
+                                <span className="truncate">{(a.client_name ?? '').split(' ')[0]}</span>
                               </div>
                             ))}
                           </div>
@@ -173,18 +207,19 @@ export default function PlanningPage() {
 
         {/* Récap par thérapeute */}
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {therapists.filter((t) => t.status === 'active').map((t) => {
-            const rdvCount = appointments.filter((a) => a.therapist === `${t.firstName} ${t.lastName}` && a.status !== 'cancelled').length
-            const ca = appointments.filter((a) => a.therapist === `${t.firstName} ${t.lastName}` && a.status === 'confirmed').reduce((s, a) => s + a.price, 0)
+          {therapists.filter(t => t.status === 'active').map((t) => {
+            const fullName = `${t.first_name} ${t.last_name}`
+            const rdvCount = weekAppointments.filter(a => a.staff_name === fullName && a.status !== 'cancelled').length
+            const ca = weekAppointments.filter(a => a.staff_name === fullName && a.status === 'confirmed').reduce((s, a) => s + (a.price ?? 0), 0)
             return (
               <div key={t.id} className="rounded-lg border border-stone-200 bg-white p-4 shadow-xs">
                 <div className="mb-3 flex items-center gap-2">
                   <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-100 text-sm font-bold text-primary-700">
-                    {t.firstName[0]}
+                    {t.first_name[0]}
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-slate-900">{t.firstName} {t.lastName}</p>
-                    <p className="text-[10px] text-stone-400">{t.specialty}</p>
+                    <p className="text-sm font-semibold text-slate-900">{t.first_name} {t.last_name}</p>
+                    <p className="text-[10px] text-stone-400">{t.specialty ?? t.role}</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-center">

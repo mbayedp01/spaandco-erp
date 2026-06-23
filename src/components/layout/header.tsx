@@ -1,7 +1,12 @@
-import { Bell, Search } from 'lucide-react'
+import { Bell, Search, LogOut } from 'lucide-react'
 import { MobileNav } from './mobile-nav'
+import { logout } from '@/lib/auth'
 
-export function Header({ title }: { title: string }) {
+export function Header({ title, userName }: { title: string; userName?: string }) {
+  const initials = userName
+    ? userName.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
+    : 'A'
+
   return (
     <header className="flex h-16 shrink-0 items-center justify-between border-b border-stone-200 bg-white px-4 sm:px-6">
       <div className="flex items-center gap-2">
@@ -22,12 +27,17 @@ export function Header({ title }: { title: string }) {
 
         <div className="flex items-center gap-3 border-l border-stone-200 pl-4">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-100 text-sm font-semibold text-primary-700">
-            A
+            {initials}
           </div>
           <div className="hidden text-sm sm:block">
-            <p className="font-medium text-slate-900">Administrateur</p>
+            <p className="font-medium text-slate-900">{userName ?? 'Administrateur'}</p>
             <p className="text-xs text-stone-400">Admin Général</p>
           </div>
+          <form action={logout}>
+            <button type="submit" title="Déconnexion" className="rounded-md p-1.5 text-stone-400 hover:bg-stone-100 hover:text-rose-500 cursor-pointer transition-colors">
+              <LogOut className="h-4 w-4" />
+            </button>
+          </form>
         </div>
       </div>
     </header>

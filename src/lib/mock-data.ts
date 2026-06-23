@@ -413,3 +413,69 @@ export const services: Service[] = [
   { id: '14', name: 'Pédicure soin', category: 'Beauté', description: 'Soin complet des pieds avec gommage et pose de vernis.', duration: 50, price: 12000, active: true },
   { id: '15', name: 'Extension de cils', category: 'Beauté', description: 'Pose de cils volume russe pour un regard intense.', duration: 90, price: 25000, active: false },
 ]
+
+// ─── Comptabilité ─────────────────────────────────────────────────────────────
+
+export const expenseCategories = [
+  { name: 'Masse salariale', amount: 820000, percent: 53, color: '#0D9488' },
+  { name: 'Fournitures & produits', amount: 310000, percent: 20, color: '#F59E0B' },
+  { name: 'Loyer & charges', amount: 250000, percent: 16, color: '#F87171' },
+  { name: 'Marketing', amount: 110000, percent: 7, color: '#A78BFA' },
+  { name: 'Divers', amount: 60000, percent: 4, color: '#CBD5E1' },
+]
+
+export const accountingTransactions = [
+  { date: '18 juin', label: 'Recettes journée', type: 'recette' as const, amount: 123000 },
+  { date: '18 juin', label: 'Salaires thérapeutes', type: 'charge' as const, amount: 48000 },
+  { date: '18 juin', label: 'Fournitures spa', type: 'charge' as const, amount: 25500 },
+  { date: '17 juin', label: 'Recettes journée', type: 'recette' as const, amount: 98000 },
+  { date: '17 juin', label: 'Abonnements clients', type: 'recette' as const, amount: 45000 },
+  { date: '17 juin', label: 'Location équipement', type: 'charge' as const, amount: 12000 },
+  { date: '16 juin', label: 'Recettes journée', type: 'recette' as const, amount: 145000 },
+  { date: '16 juin', label: 'Maintenance locaux', type: 'charge' as const, amount: 35000 },
+  { date: '15 juin', label: 'Recettes journée', type: 'recette' as const, amount: 112000 },
+  { date: '15 juin', label: 'Achat produits NaturaBio', type: 'charge' as const, amount: 68000 },
+  { date: '14 juin', label: 'Recettes journée', type: 'recette' as const, amount: 89000 },
+  { date: '14 juin', label: 'Salaires réceptionnistes', type: 'charge' as const, amount: 30000 },
+]
+
+// ─── Marketing ────────────────────────────────────────────────────────────────
+
+export const marketingSegments = [
+  { name: 'VIP', count: 6, colorClass: 'bg-amber-50 text-amber-700 border-amber-200', desc: 'CA > 200 000 F' },
+  { name: 'Fidèles', count: 8, colorClass: 'bg-primary-50 text-primary-700 border-primary-200', desc: 'Plus de 5 visites' },
+  { name: 'Inactifs', count: 4, colorClass: 'bg-rose-50 text-rose-700 border-rose-200', desc: 'Absents depuis 60j' },
+  { name: 'Nouveaux', count: 4, colorClass: 'bg-emerald-50 text-emerald-700 border-emerald-200', desc: 'Moins de 30 jours' },
+]
+
+// ─── Paramètres ───────────────────────────────────────────────────────────────
+
+export interface Establishment {
+  id: string
+  name: string
+  address: string
+  staff: number
+  status: 'actif' | 'ouverture'
+}
+
+export const establishments: Establishment[] = [
+  { id: '1', name: 'Spa and Co — Almadies', address: 'Almadies, Dakar', staff: 8, status: 'actif' },
+  { id: '2', name: 'Spa and Co — Plateau', address: 'Plateau, Dakar', staff: 5, status: 'actif' },
+  { id: '3', name: 'Spa and Co — Saly', address: 'Saly, Mbour', staff: 4, status: 'ouverture' },
+]
+
+export interface AppUser {
+  id: string
+  name: string
+  role: string
+  email: string
+  lastLogin: string
+  status: 'actif' | 'inactif'
+}
+
+export const appUsers: AppUser[] = [
+  { id: '1', name: 'Ibrahima Seck', role: 'Administrateur', email: 'ibrahima.seck@spaandco.sn', lastLogin: '18 juin 2026', status: 'actif' },
+  { id: '2', name: 'Awa Sow', role: 'Thérapeute', email: 'awa.sow@spaandco.sn', lastLogin: '18 juin 2026', status: 'actif' },
+  { id: '3', name: 'Fatima Ly', role: 'Caissière', email: 'fatima.ly@spaandco.sn', lastLogin: '17 juin 2026', status: 'actif' },
+  { id: '4', name: 'Ndèye Mbaye', role: 'Réceptionniste', email: 'ndeye.mbaye@spaandco.sn', lastLogin: '15 juin 2026', status: 'inactif' },
+]
