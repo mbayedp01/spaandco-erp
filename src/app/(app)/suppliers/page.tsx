@@ -1,5 +1,6 @@
 import { Header } from '@/components/layout/header'
 import { getSuppliers } from '@/lib/db/suppliers'
+import { getCurrentSpaId } from '@/lib/spa'
 import { cn } from '@/lib/utils'
 import { Plus, Truck, AlertCircle, ShoppingCart } from 'lucide-react'
 
@@ -19,7 +20,8 @@ const categoryColor: Record<string, string> = {
 }
 
 export default async function SuppliersPage() {
-  const suppliers = await getSuppliers()
+  const spaId = getCurrentSpaId()
+  const suppliers = await getSuppliers(spaId)
   const actifs = suppliers.filter((s) => s.status === 'actif')
   const pending = suppliers.reduce((sum, s) => sum + s.pending_orders, 0)
   const totalMonthly = actifs.reduce((sum, s) => sum + s.monthly_spend, 0)

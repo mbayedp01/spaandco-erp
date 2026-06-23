@@ -1,5 +1,6 @@
 import { Header } from '@/components/layout/header'
 import { getInventory } from '@/lib/db/inventory'
+import { getCurrentSpaId } from '@/lib/spa'
 import { cn } from '@/lib/utils'
 import { AlertTriangle, Plus, Package } from 'lucide-react'
 
@@ -13,7 +14,8 @@ const categoryColor: Record<string, string> = {
 }
 
 export default async function InventoryPage() {
-  const items = await getInventory()
+  const spaId = getCurrentSpaId()
+  const items = await getInventory(spaId)
   const low = items.filter((i) => i.quantity < i.min_quantity)
   const ok  = items.filter((i) => i.quantity >= i.min_quantity)
   const totalValue = items.reduce((s, i) => s + i.quantity * (i.unit_price ?? 0), 0)

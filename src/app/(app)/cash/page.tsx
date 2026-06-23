@@ -1,5 +1,6 @@
 import { Header } from '@/components/layout/header'
 import { getCashTransactions } from '@/lib/db/cash'
+import { getCurrentSpaId } from '@/lib/spa'
 import { cn } from '@/lib/utils'
 import { TrendingUp, TrendingDown, Wallet, Plus } from 'lucide-react'
 
@@ -11,7 +12,8 @@ const methodColor: Record<string, string> = {
 }
 
 export default async function CashPage() {
-  const transactions = await getCashTransactions()
+  const spaId = getCurrentSpaId()
+  const transactions = await getCashTransactions(spaId)
   const today = new Date().toISOString().split('T')[0]
   const todayTx = transactions.filter((t) => t.date === today)
 

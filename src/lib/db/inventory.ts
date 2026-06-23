@@ -3,12 +3,11 @@ import type { Database } from '@/lib/supabase/types'
 
 type InventoryItem = Database['public']['Tables']['inventory']['Row']
 
-export async function getInventory(): Promise<InventoryItem[]> {
+export async function getInventory(spaId?: string): Promise<InventoryItem[]> {
   const supabase = createServerClient()
-  const { data, error } = await supabase
-    .from('inventory')
-    .select('*')
-    .order('name')
+  let query = supabase.from('inventory').select('*').order('name')
+  if (spaId) query = query.eq('spa_id', spaId)
+  const { data, error } = await query
   if (error) console.error('getInventory:', error.message)
   return (data as InventoryItem[] | null) ?? []
 }

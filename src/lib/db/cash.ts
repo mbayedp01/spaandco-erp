@@ -3,13 +3,15 @@ import type { Database } from '@/lib/supabase/types'
 
 type CashTransaction = Database['public']['Tables']['cash_transactions']['Row']
 
-export async function getCashTransactions(): Promise<CashTransaction[]> {
+export async function getCashTransactions(spaId?: string): Promise<CashTransaction[]> {
   const supabase = createServerClient()
-  const { data, error } = await supabase
+  let query = supabase
     .from('cash_transactions')
     .select('*')
     .order('date', { ascending: false })
     .order('created_at', { ascending: false })
+  if (spaId) query = query.eq('spa_id', spaId)
+  const { data, error } = await query
   if (error) console.error('getCashTransactions:', error.message)
   return (data as CashTransaction[] | null) ?? []
 }
@@ -21,6 +23,7 @@ export async function addCashTransaction(payload: {
   type: 'recette' | 'charge'
   payment_method: string
   date?: string
+  spa_id?: string
 }): Promise<CashTransaction> {
   const supabase = createServerClient()
   const { data, error } = await supabase

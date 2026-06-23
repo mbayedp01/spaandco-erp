@@ -3,6 +3,19 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 export interface Database {
   public: {
     Tables: {
+      establishments: {
+        Row: {
+          id: string
+          name: string
+          city: string
+          address: string | null
+          phone: string | null
+          status: string
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['establishments']['Row'], 'id' | 'created_at'>
+        Update: Partial<Database['public']['Tables']['establishments']['Insert']>
+      }
       clients: {
         Row: {
           id: string
@@ -32,6 +45,7 @@ export interface Database {
           salary: number | null
           status: string
           rating: number | null
+          spa_id: string | null
           created_at: string
         }
         Insert: Omit<Database['public']['Tables']['staff']['Row'], 'id' | 'created_at'>
@@ -66,6 +80,7 @@ export interface Database {
           price: number | null
           status: string
           day: number | null
+          spa_id: string | null
           created_at: string
         }
         Insert: Omit<Database['public']['Tables']['appointments']['Row'], 'id' | 'created_at'>
@@ -81,6 +96,7 @@ export interface Database {
           min_quantity: number
           supplier: string | null
           unit_price: number | null
+          spa_id: string | null
           created_at: string
         }
         Insert: Omit<Database['public']['Tables']['inventory']['Row'], 'id' | 'created_at'>
@@ -98,6 +114,7 @@ export interface Database {
           last_order: string | null
           status: string
           pending_orders: number
+          spa_id: string | null
           created_at: string
         }
         Insert: Omit<Database['public']['Tables']['suppliers']['Row'], 'id' | 'created_at'>
@@ -112,6 +129,7 @@ export interface Database {
           amount: number
           type: string
           payment_method: string | null
+          spa_id: string | null
           created_at: string
         }
         Insert: Omit<Database['public']['Tables']['cash_transactions']['Row'], 'id' | 'created_at'>

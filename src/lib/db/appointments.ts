@@ -3,24 +3,21 @@ import type { Database } from '@/lib/supabase/types'
 
 type Appointment = Database['public']['Tables']['appointments']['Row']
 
-export async function getAppointments(): Promise<Appointment[]> {
+export async function getAppointments(spaId?: string): Promise<Appointment[]> {
   const supabase = createServerClient()
-  const { data, error } = await supabase
-    .from('appointments')
-    .select('*')
-    .order('date')
+  let query = supabase.from('appointments').select('*').order('date')
+  if (spaId) query = query.eq('spa_id', spaId)
+  const { data, error } = await query
   if (error) console.error('getAppointments:', error.message)
   return (data as Appointment[] | null) ?? []
 }
 
-export async function getTodayAppointments(): Promise<Appointment[]> {
+export async function getTodayAppointments(spaId?: string): Promise<Appointment[]> {
   const today = new Date().toISOString().split('T')[0]
   const supabase = createServerClient()
-  const { data, error } = await supabase
-    .from('appointments')
-    .select('*')
-    .eq('date', today)
-    .order('time')
+  let query = supabase.from('appointments').select('*').eq('date', today).order('time')
+  if (spaId) query = query.eq('spa_id', spaId)
+  const { data, error } = await query
   if (error) console.error('getTodayAppointments:', error.message)
   return (data as Appointment[] | null) ?? []
 }
@@ -34,6 +31,7 @@ export async function createAppointment(payload: {
   duration: number
   price: number
   status?: string
+  spa_id?: string
 }): Promise<Appointment> {
   const supabase = createServerClient()
   const { data, error } = await supabase

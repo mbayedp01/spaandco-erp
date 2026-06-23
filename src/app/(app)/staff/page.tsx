@@ -1,6 +1,7 @@
 import { Header } from '@/components/layout/header'
 import { getStaff } from '@/lib/db/staff'
 import { getTodayAppointments } from '@/lib/db/appointments'
+import { getCurrentSpaId } from '@/lib/spa'
 import { cn } from '@/lib/utils'
 import { UserCheck, UserX, Palmtree, Plus, Star } from 'lucide-react'
 
@@ -18,7 +19,8 @@ const roleColor: Record<string, string> = {
 }
 
 export default async function StaffPage() {
-  const [staffList, todayAppts] = await Promise.all([getStaff(), getTodayAppointments()])
+  const spaId = getCurrentSpaId()
+  const [staffList, todayAppts] = await Promise.all([getStaff(spaId), getTodayAppointments(spaId)])
 
   const rdvCounts: Record<string, number> = {}
   for (const a of todayAppts) {

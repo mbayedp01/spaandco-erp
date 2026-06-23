@@ -5,6 +5,18 @@
 -- Extensions
 create extension if not exists "uuid-ossp";
 
+-- ─── Établissements ───────────────────────────────────────
+
+create table if not exists public.establishments (
+  id         uuid primary key default gen_random_uuid(),
+  name       text not null,
+  city       text not null,
+  address    text,
+  phone      text,
+  status     text not null default 'actif',
+  created_at timestamptz not null default now()
+);
+
 -- ─── Clients ──────────────────────────────────────────────
 
 create table if not exists public.clients (
@@ -34,6 +46,7 @@ create table if not exists public.staff (
   salary     numeric,
   status     text not null default 'active',
   rating     numeric,
+  spa_id     uuid references public.establishments(id) on delete set null,
   created_at timestamptz not null default now()
 );
 
@@ -66,6 +79,7 @@ create table if not exists public.appointments (
   price        numeric,
   status       text not null default 'pending',
   day          int,
+  spa_id       uuid references public.establishments(id) on delete set null,
   created_at   timestamptz not null default now()
 );
 
@@ -80,6 +94,7 @@ create table if not exists public.inventory (
   min_quantity int  not null default 5,
   supplier     text,
   unit_price   numeric,
+  spa_id       uuid references public.establishments(id) on delete set null,
   created_at   timestamptz not null default now()
 );
 
@@ -96,6 +111,7 @@ create table if not exists public.suppliers (
   last_order     date,
   status         text not null default 'actif',
   pending_orders int  not null default 0,
+  spa_id         uuid references public.establishments(id) on delete set null,
   created_at     timestamptz not null default now()
 );
 
@@ -109,6 +125,7 @@ create table if not exists public.cash_transactions (
   amount         numeric not null,
   type           text not null, -- 'recette' | 'charge'
   payment_method text,
+  spa_id         uuid references public.establishments(id) on delete set null,
   created_at     timestamptz not null default now()
 );
 
@@ -154,38 +171,29 @@ create table if not exists public.campaigns (
 );
 
 -- ============================================================
--- Row Level Security (RLS) — authentification requise
+-- Row Level Security (RLS)
 -- ============================================================
 
-alter table public.clients          enable row level security;
-alter table public.staff            enable row level security;
-alter table public.services         enable row level security;
-alter table public.appointments     enable row level security;
-alter table public.inventory        enable row level security;
-alter table public.suppliers        enable row level security;
+alter table public.establishments    enable row level security;
+alter table public.clients           enable row level security;
+alter table public.staff             enable row level security;
+alter table public.services          enable row level security;
+alter table public.appointments      enable row level security;
+alter table public.inventory         enable row level security;
+alter table public.suppliers         enable row level security;
 alter table public.cash_transactions enable row level security;
-alter table public.membership_plans enable row level security;
-alter table public.memberships      enable row level security;
-alter table public.campaigns        enable row level security;
+alter table public.membership_plans  enable row level security;
+alter table public.memberships       enable row level security;
+alter table public.campaigns         enable row level security;
 
--- Politiques : utilisateurs connectés peuvent tout lire/écrire
-create policy "authenticated_read"  on public.clients          for select using (auth.role() = 'authenticated');
-create policy "authenticated_write" on public.clients          for all    using (auth.role() = 'authenticated');
-create policy "authenticated_read"  on public.staff            for select using (auth.role() = 'authenticated');
-create policy "authenticated_write" on public.staff            for all    using (auth.role() = 'authenticated');
-create policy "authenticated_read"  on public.services         for select using (auth.role() = 'authenticated');
-create policy "authenticated_write" on public.services         for all    using (auth.role() = 'authenticated');
-create policy "authenticated_read"  on public.appointments     for select using (auth.role() = 'authenticated');
-create policy "authenticated_write" on public.appointments     for all    using (auth.role() = 'authenticated');
-create policy "authenticated_read"  on public.inventory        for select using (auth.role() = 'authenticated');
-create policy "authenticated_write" on public.inventory        for all    using (auth.role() = 'authenticated');
-create policy "authenticated_read"  on public.suppliers        for select using (auth.role() = 'authenticated');
-create policy "authenticated_write" on public.suppliers        for all    using (auth.role() = 'authenticated');
-create policy "authenticated_read"  on public.cash_transactions for select using (auth.role() = 'authenticated');
-create policy "authenticated_write" on public.cash_transactions for all    using (auth.role() = 'authenticated');
-create policy "authenticated_read"  on public.membership_plans for select using (auth.role() = 'authenticated');
-create policy "authenticated_write" on public.membership_plans for all    using (auth.role() = 'authenticated');
-create policy "authenticated_read"  on public.memberships      for select using (auth.role() = 'authenticated');
-create policy "authenticated_write" on public.memberships      for all    using (auth.role() = 'authenticated');
-create policy "authenticated_read"  on public.campaigns        for select using (auth.role() = 'authenticated');
-create policy "authenticated_write" on public.campaigns        for all    using (auth.role() = 'authenticated');
+create policy "auth_all" on public.establishments    for all using (auth.role() = 'authenticated');
+create policy "auth_all" on public.clients           for all using (auth.role() = 'authenticated');
+create policy "auth_all" on public.staff             for all using (auth.role() = 'authenticated');
+create policy "auth_all" on public.services          for all using (auth.role() = 'authenticated');
+create policy "auth_all" on public.appointments      for all using (auth.role() = 'authenticated');
+create policy "auth_all" on public.inventory         for all using (auth.role() = 'authenticated');
+create policy "auth_all" on public.suppliers         for all using (auth.role() = 'authenticated');
+create policy "auth_all" on public.cash_transactions for all using (auth.role() = 'authenticated');
+create policy "auth_all" on public.membership_plans  for all using (auth.role() = 'authenticated');
+create policy "auth_all" on public.memberships       for all using (auth.role() = 'authenticated');
+create policy "auth_all" on public.campaigns         for all using (auth.role() = 'authenticated');

@@ -1,6 +1,7 @@
 import { Header } from '@/components/layout/header'
 import { createServerClient } from '@/lib/supabase/server'
 import { getStaff } from '@/lib/db/staff'
+import { getCurrentSpaId } from '@/lib/spa'
 import type { Database } from '@/lib/supabase/types'
 import { cn } from '@/lib/utils'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
@@ -32,26 +33,24 @@ function getWeekDates() {
   })
 }
 
-async function getWeekAppointments(start: string, end: string): Promise<Appointment[]> {
+async function getWeekAppointments(start: string, end: string, spaId?: string): Promise<Appointment[]> {
   const supabase = createServerClient()
-  const { data, error } = await supabase
-    .from('appointments')
-    .select('*')
-    .gte('date', start)
-    .lte('date', end)
-    .order('time')
+  let query = supabase.from('appointments').select('*').gte('date', start).lte('date', end).order('time')
+  if (spaId) query = query.eq('spa_id', spaId)
+  const { data, error } = await query
   if (error) console.error('getWeekAppointments:', error.message)
   return (data as Appointment[] | null) ?? []
 }
 
 export default async function PlanningPage() {
+  const spaId = getCurrentSpaId()
   const weekDays = getWeekDates()
   const today = new Date().toISOString().split('T')[0]
   const todayIndex = weekDays.findIndex(d => d.iso === today)
 
   const [staff, weekAppointments] = await Promise.all([
-    getStaff(),
-    getWeekAppointments(weekDays[0].iso, weekDays[5].iso),
+    getStaff(spaId),
+    getWeekAppointments(weekDays[0].iso, weekDays[5].iso, spaId),
   ])
 
   const therapists = staff.filter(s => s.role === 'Thérapeute' || s.role === 'Esthéticienne')

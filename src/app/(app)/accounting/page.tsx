@@ -1,12 +1,14 @@
 import { Header } from '@/components/layout/header'
 import { revenueByMonth, expenseCategories } from '@/lib/mock-data'
 import { getCashTransactions } from '@/lib/db/cash'
+import { getCurrentSpaId } from '@/lib/spa'
 import { ComptaBarChart, ExpensePieChart } from '@/components/reports/charts'
 import { cn } from '@/lib/utils'
 import { TrendingUp, TrendingDown, Download } from 'lucide-react'
 
 export default async function AccountingPage() {
-  const transactions = await getCashTransactions()
+  const spaId = getCurrentSpaId()
+  const transactions = await getCashTransactions(spaId)
   const lastMonth = revenueByMonth[revenueByMonth.length - 1]
   const prevMonth = revenueByMonth[revenueByMonth.length - 2]
   const profit = lastMonth.ca - lastMonth.depenses

@@ -2,7 +2,12 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import type { Database } from './types'
 
+const IS_PLACEHOLDER = process.env.NEXT_PUBLIC_SUPABASE_URL?.includes('placeholder')
+
 export async function updateSession(request: NextRequest) {
+  // Skip auth enforcement when running without real Supabase credentials
+  if (IS_PLACEHOLDER) return NextResponse.next({ request })
+
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient<Database>(

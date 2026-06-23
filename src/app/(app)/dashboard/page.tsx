@@ -4,6 +4,7 @@ import { RevenueChart, ServicesChart } from '@/components/dashboard/charts'
 import { kpis, topServices } from '@/lib/mock-data'
 import { getTodayAppointments } from '@/lib/db/appointments'
 import { getStaff } from '@/lib/db/staff'
+import { getCurrentSpaId } from '@/lib/spa'
 import { cn } from '@/lib/utils'
 import { CalendarDays, Users, UserCheck } from 'lucide-react'
 
@@ -24,9 +25,10 @@ const statusLabel: Record<string, string> = {
 }
 
 export default async function DashboardPage() {
+  const spaId = getCurrentSpaId()
   const [todayAppointments, staff] = await Promise.all([
-    getTodayAppointments(),
-    getStaff(),
+    getTodayAppointments(spaId),
+    getStaff(spaId),
   ])
   const activeStaff = staff.filter((s) => s.status === 'active').length
 
