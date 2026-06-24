@@ -3,7 +3,8 @@ import { getStaff } from '@/lib/db/staff'
 import { getTodayAppointments } from '@/lib/db/appointments'
 import { getCurrentSpaId } from '@/lib/spa'
 import { cn } from '@/lib/utils'
-import { UserCheck, UserX, Palmtree, Plus, Star } from 'lucide-react'
+import { UserCheck, UserX, Palmtree, Star } from 'lucide-react'
+import { AddStaffButton } from '@/components/forms/staff-form'
 
 const statusConfig: Record<string, { label: string; className: string }> = {
   active: { label: 'Actif',  className: 'bg-emerald-50 text-emerald-700' },
@@ -74,10 +75,7 @@ export default async function StaffPage() {
         <div className="rounded-lg border border-stone-200 bg-white shadow-xs">
           <div className="flex items-center justify-between border-b border-stone-200 px-5 py-4">
             <h2 className="font-semibold text-slate-900">Équipe ({staffList.length} membres)</h2>
-            <button className="flex items-center gap-2 rounded-md bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700 cursor-pointer">
-              <Plus className="h-4 w-4" />
-              Ajouter
-            </button>
+            <AddStaffButton />
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

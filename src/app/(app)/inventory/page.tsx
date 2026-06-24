@@ -2,7 +2,8 @@ import { Header } from '@/components/layout/header'
 import { getInventory } from '@/lib/db/inventory'
 import { getCurrentSpaId } from '@/lib/spa'
 import { cn } from '@/lib/utils'
-import { AlertTriangle, Plus, Package } from 'lucide-react'
+import { AlertTriangle, Package } from 'lucide-react'
+import { AddInventoryButton } from '@/components/forms/inventory-form'
 
 const categoryColor: Record<string, string> = {
   Huiles: 'bg-amber-50 text-amber-700',
@@ -53,10 +54,7 @@ export default async function InventoryPage() {
         <div className="rounded-lg border border-stone-200 bg-white shadow-xs">
           <div className="flex items-center justify-between border-b border-stone-200 px-5 py-4">
             <h2 className="font-semibold text-slate-900">Articles ({items.length})</h2>
-            <button className="flex items-center gap-2 rounded-md bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700 cursor-pointer">
-              <Plus className="h-4 w-4" />
-              Ajouter
-            </button>
+            <AddInventoryButton />
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

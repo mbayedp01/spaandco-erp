@@ -2,7 +2,8 @@ import { Header } from '@/components/layout/header'
 import { getCashTransactions } from '@/lib/db/cash'
 import { getCurrentSpaId } from '@/lib/spa'
 import { cn } from '@/lib/utils'
-import { TrendingUp, TrendingDown, Wallet, Plus } from 'lucide-react'
+import { TrendingUp, TrendingDown, Wallet } from 'lucide-react'
+import { AddTransactionButton } from '@/components/forms/transaction-form'
 
 const methodColor: Record<string, string> = {
   Carte:         'bg-blue-50 text-blue-700',
@@ -61,10 +62,7 @@ export default async function CashPage() {
               Transactions récentes
               {todayTx.length > 0 && <span className="ml-2 text-sm font-normal text-stone-400">({todayTx.length} aujourd&apos;hui)</span>}
             </h2>
-            <button className="flex items-center gap-2 rounded-md bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700 cursor-pointer">
-              <Plus className="h-4 w-4" />
-              Ajouter
-            </button>
+            <AddTransactionButton />
           </div>
           <div className="divide-y divide-stone-100">
             {transactions.map((t) => (

@@ -4,7 +4,8 @@ import { useState, useMemo } from 'react'
 import { Header } from '@/components/layout/header'
 import type { Database } from '@/lib/supabase/types'
 import { formatDate } from '@/lib/utils'
-import { Star, Plus, Search, Users, Crown, Sparkles } from 'lucide-react'
+import { Star, Search, Users, Crown, Sparkles } from 'lucide-react'
+import { AddClientButton } from '@/components/forms/client-form'
 import { cn } from '@/lib/utils'
 
 type Client = Database['public']['Tables']['clients']['Row']
@@ -98,10 +99,7 @@ export function ClientsView({ clients }: { clients: Client[] }) {
               ))}
             </div>
           </div>
-          <button className="flex items-center gap-2 rounded-md bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700 cursor-pointer">
-            <Plus className="h-4 w-4" />
-            Nouveau client
-          </button>
+          <AddClientButton />
         </div>
 
         <div className="overflow-hidden rounded-lg border border-stone-200 bg-white shadow-xs">

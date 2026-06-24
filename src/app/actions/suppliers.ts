@@ -1,0 +1,33 @@
+'use server'
+
+import { revalidatePath } from 'next/cache'
+import { createServerClient } from '@/lib/supabase/server'
+import { getCurrentSpaId } from '@/lib/spa'
+
+export async function createSupplierAction(formData: FormData): Promise<void> {
+  const spaId         = getCurrentSpaId()
+  const name          = String(formData.get('name')          ?? '').trim()
+  const category      = String(formData.get('category')      ?? '').trim()
+  const contact       = String(formData.get('contact')       ?? '').trim()
+  const phone         = String(formData.get('phone')         ?? '').trim()
+  const email         = String(formData.get('email')         ?? '').trim()
+  const monthly_spend = Number(formData.get('monthly_spend')) || 0
+
+  if (!name) throw new Error('Nom du fournisseur requis')
+
+  const supabase = createServerClient()
+  const { error } = await supabase.from('suppliers').insert({
+    name,
+    category: category || null,
+    contact: contact || null,
+    phone: phone || null,
+    email: email || null,
+    monthly_spend,
+    status: 'actif',
+    pending_orders: 0,
+    spa_id: spaId,
+  } as any)
+
+  if (error) throw new Error(error.message)
+  revalidatePath('/suppliers')
+}
