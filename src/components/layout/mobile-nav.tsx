@@ -5,14 +5,16 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { Sparkles, Menu, X } from 'lucide-react'
-import { navItems } from './nav-items'
+import { getNavItemsForRole } from './nav-items'
 import { SpaSwitcher } from './spa-switcher'
 import { useSpa } from './spa-context'
+import { ROLE_LABELS, ROLE_COLORS } from '@/lib/roles'
 
 export function MobileNav() {
   const [open, setOpen] = useState(false)
   const pathname = usePathname()
-  const { establishments, currentSpaId } = useSpa()
+  const { establishments, currentSpaId, userRole } = useSpa()
+  const items = getNavItemsForRole(userRole)
 
   return (
     <>
@@ -48,14 +50,14 @@ export function MobileNav() {
               </button>
             </div>
 
-            {establishments.length > 0 && (
+            {establishments.length > 0 && userRole === 'admin' && (
               <div className="border-b border-sidebar-light pb-1">
                 <SpaSwitcher establishments={establishments} currentSpaId={currentSpaId} />
               </div>
             )}
 
             <nav className="flex-1 overflow-y-auto px-3 py-4">
-              {navItems.map((item) => {
+              {items.map((item) => {
                 const active = pathname.startsWith(item.href)
                 const Icon = item.icon
                 return (
@@ -83,8 +85,11 @@ export function MobileNav() {
               })}
             </nav>
 
-            <div className="border-t border-sidebar-light px-6 py-3 text-xs text-stone-600">
-              Spa and Co · v0.1
+            <div className="border-t border-sidebar-light px-6 py-3">
+              <span className={cn('rounded-full px-2.5 py-0.5 text-[10px] font-semibold', ROLE_COLORS[userRole])}>
+                {ROLE_LABELS[userRole]}
+              </span>
+              <p className="mt-1 text-[10px] text-stone-600">Spa and Co · v0.1</p>
             </div>
           </aside>
         </div>

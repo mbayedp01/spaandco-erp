@@ -4,18 +4,22 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { Sparkles } from 'lucide-react'
-import { navItems } from './nav-items'
+import { getNavItemsForRole } from './nav-items'
 import { SpaSwitcher } from './spa-switcher'
+import { ROLE_LABELS, ROLE_COLORS } from '@/lib/roles'
+import type { UserRole } from '@/lib/roles'
 
 type Establishment = { id: string; name: string; city: string }
 
 interface SidebarProps {
   establishments: Establishment[]
   currentSpaId: string
+  userRole: UserRole
 }
 
-export function Sidebar({ establishments, currentSpaId }: SidebarProps) {
+export function Sidebar({ establishments, currentSpaId, userRole }: SidebarProps) {
   const pathname = usePathname()
+  const items = getNavItemsForRole(userRole)
 
   return (
     <aside className="hidden w-64 shrink-0 flex-col bg-sidebar text-stone-300 lg:flex">
@@ -31,7 +35,7 @@ export function Sidebar({ establishments, currentSpaId }: SidebarProps) {
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 py-3">
-        {navItems.map((item) => {
+        {items.map((item) => {
           const active = pathname.startsWith(item.href)
           const Icon = item.icon
           return (
@@ -59,8 +63,11 @@ export function Sidebar({ establishments, currentSpaId }: SidebarProps) {
         })}
       </nav>
 
-      <div className="border-t border-sidebar-light px-6 py-3 text-xs text-stone-600">
-        Spa and Co · v0.1
+      <div className="border-t border-sidebar-light px-5 py-3">
+        <span className={cn('rounded-full px-2.5 py-0.5 text-[10px] font-semibold', ROLE_COLORS[userRole])}>
+          {ROLE_LABELS[userRole]}
+        </span>
+        <p className="mt-1 text-[10px] text-stone-600">Spa and Co · v0.1</p>
       </div>
     </aside>
   )

@@ -15,27 +15,33 @@ import {
   BadgeCheck,
   type LucideIcon,
 } from 'lucide-react'
+import type { UserRole } from '@/lib/roles'
 
 export interface NavItem {
   label: string
   href: string
   icon: LucideIcon
   section?: string
+  roles: UserRole[]
 }
 
 export const navItems: NavItem[] = [
-  { label: 'Tableau de bord', href: '/dashboard', icon: LayoutDashboard, section: 'Opérations' },
-  { label: 'Clients', href: '/clients', icon: Users },
-  { label: 'Abonnements', href: '/subscriptions', icon: BadgeCheck },
-  { label: 'Rendez-vous', href: '/appointments', icon: CalendarDays },
-  { label: 'Prestations', href: '/services', icon: Sparkles },
-  { label: 'Personnel', href: '/staff', icon: UserCheck, section: 'Équipe & Stock' },
-  { label: 'Planning', href: '/planning', icon: CalendarCheck },
-  { label: 'Stocks', href: '/inventory', icon: Package },
-  { label: 'Fournisseurs', href: '/suppliers', icon: Truck },
-  { label: 'Caisse', href: '/cash', icon: CreditCard, section: 'Finance' },
-  { label: 'Comptabilité', href: '/accounting', icon: Calculator },
-  { label: 'Marketing', href: '/marketing', icon: Megaphone },
-  { label: 'Rapports', href: '/reports', icon: BarChart3 },
-  { label: 'Paramètres', href: '/settings', icon: Settings, section: 'Système' },
+  { label: 'Tableau de bord', href: '/dashboard',     icon: LayoutDashboard, section: 'Opérations', roles: ['admin', 'caissier', 'medecin'] },
+  { label: 'Clients',         href: '/clients',        icon: Users,                                  roles: ['admin', 'caissier', 'medecin'] },
+  { label: 'Abonnements',     href: '/subscriptions',  icon: BadgeCheck,                             roles: ['admin', 'caissier', 'medecin'] },
+  { label: 'Rendez-vous',     href: '/appointments',   icon: CalendarDays,                           roles: ['admin', 'caissier', 'medecin'] },
+  { label: 'Prestations',     href: '/services',       icon: Sparkles,                               roles: ['admin', 'medecin'] },
+  { label: 'Personnel',       href: '/staff',          icon: UserCheck,       section: 'Équipe & Stock', roles: ['admin'] },
+  { label: 'Planning',        href: '/planning',       icon: CalendarCheck,                          roles: ['admin', 'medecin'] },
+  { label: 'Stocks',          href: '/inventory',      icon: Package,                                roles: ['admin'] },
+  { label: 'Fournisseurs',    href: '/suppliers',      icon: Truck,                                  roles: ['admin'] },
+  { label: 'Caisse',          href: '/cash',           icon: CreditCard,      section: 'Finance',   roles: ['admin', 'caissier'] },
+  { label: 'Comptabilité',    href: '/accounting',     icon: Calculator,                             roles: ['admin'] },
+  { label: 'Marketing',       href: '/marketing',      icon: Megaphone,                              roles: ['admin'] },
+  { label: 'Rapports',        href: '/reports',        icon: BarChart3,                              roles: ['admin'] },
+  { label: 'Paramètres',      href: '/settings',       icon: Settings,        section: 'Système',   roles: ['admin'] },
 ]
+
+export function getNavItemsForRole(role: UserRole): NavItem[] {
+  return navItems.filter(item => item.roles.includes(role))
+}

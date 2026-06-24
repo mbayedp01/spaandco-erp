@@ -3,17 +3,19 @@ import { BottomNav } from '@/components/layout/bottom-nav'
 import { SpaProvider } from '@/components/layout/spa-context'
 import { getEstablishments } from '@/lib/db/establishments'
 import { getCurrentSpaId } from '@/lib/spa'
+import { getCurrentUserRole } from '@/lib/user-role'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const [establishments, currentSpaId] = await Promise.all([
+  const [establishments, currentSpaId, userRole] = await Promise.all([
     getEstablishments(),
     Promise.resolve(getCurrentSpaId()),
+    getCurrentUserRole(),
   ])
 
   return (
-    <SpaProvider establishments={establishments} currentSpaId={currentSpaId}>
+    <SpaProvider establishments={establishments} currentSpaId={currentSpaId} userRole={userRole}>
       <div className="flex h-screen overflow-hidden bg-stone-50">
-        <Sidebar establishments={establishments} currentSpaId={currentSpaId} />
+        <Sidebar establishments={establishments} currentSpaId={currentSpaId} userRole={userRole} />
         <div className="flex flex-1 flex-col overflow-hidden pb-16 lg:pb-0">
           {children}
         </div>

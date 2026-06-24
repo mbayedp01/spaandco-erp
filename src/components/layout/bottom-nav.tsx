@@ -3,28 +3,31 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { LayoutDashboard, Users, CalendarDays, CreditCard, MoreHorizontal } from 'lucide-react'
+import { LayoutDashboard, Users, CalendarDays, CreditCard, MoreHorizontal, Stethoscope } from 'lucide-react'
 import { useState } from 'react'
-import { navItems } from './nav-items'
-import { Sparkles, Menu, X } from 'lucide-react'
+import { getNavItemsForRole } from './nav-items'
 import { SpaSwitcher } from './spa-switcher'
 import { useSpa } from './spa-context'
+import { ROLE_LABELS, ROLE_COLORS } from '@/lib/roles'
 
-const primaryTabs = [
-  { label: 'Accueil', href: '/dashboard', icon: LayoutDashboard },
-  { label: 'Clients',  href: '/clients',   icon: Users },
-  { label: 'RDV',      href: '/appointments', icon: CalendarDays },
-  { label: 'Caisse',   href: '/cash',      icon: CreditCard },
-]
+const ALL_PRIMARY_TABS = [
+  { label: 'Accueil', href: '/dashboard',    icon: LayoutDashboard, roles: ['admin','caissier','medecin'] },
+  { label: 'Clients', href: '/clients',       icon: Users,           roles: ['admin','caissier','medecin'] },
+  { label: 'RDV',     href: '/appointments',  icon: CalendarDays,    roles: ['admin','caissier','medecin'] },
+  { label: 'Caisse',  href: '/cash',          icon: CreditCard,      roles: ['admin','caissier'] },
+  { label: 'Soins',   href: '/services',      icon: Stethoscope,     roles: ['medecin'] },
+] as const
 
 export function BottomNav() {
   const pathname = usePathname()
   const [menuOpen, setMenuOpen] = useState(false)
-  const { establishments, currentSpaId } = useSpa()
+  const { establishments, currentSpaId, userRole } = useSpa()
+
+  const primaryTabs = ALL_PRIMARY_TABS.filter(t => (t.roles as readonly string[]).includes(userRole))
+  const allItems = getNavItemsForRole(userRole)
 
   return (
     <>
-      {/* Bottom tab bar — visible only on mobile */}
       <nav className="fixed bottom-0 left-0 right-0 z-40 flex h-16 items-center justify-around border-t border-stone-200 bg-white lg:hidden">
         {primaryTabs.map(({ label, href, icon: Icon }) => {
           const active = pathname.startsWith(href)
@@ -46,26 +49,30 @@ export function BottomNav() {
         </button>
       </nav>
 
-      {/* Full menu drawer from bottom */}
       {menuOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={() => setMenuOpen(false)} aria-hidden />
           <div className="absolute bottom-0 left-0 right-0 rounded-t-2xl bg-white shadow-2xl">
-            {/* Handle */}
             <div className="flex justify-center pt-3 pb-1">
               <div className="h-1 w-10 rounded-full bg-stone-200" />
             </div>
 
-            {/* Spa switcher */}
-            {establishments.length > 0 && (
+            {/* Role badge */}
+            <div className="mx-4 mb-2 flex items-center justify-between">
+              <span className={cn('rounded-full px-3 py-1 text-xs font-semibold', ROLE_COLORS[userRole])}>
+                {ROLE_LABELS[userRole]}
+              </span>
+            </div>
+
+            {/* Spa switcher — admin only */}
+            {userRole === 'admin' && establishments.length > 0 && (
               <div className="mx-4 mb-3 rounded-xl bg-sidebar overflow-hidden">
                 <SpaSwitcher establishments={establishments} currentSpaId={currentSpaId} />
               </div>
             )}
 
-            {/* All nav items */}
             <div className="overflow-y-auto px-4 pb-8" style={{ maxHeight: '60vh' }}>
-              {navItems.map((item) => {
+              {allItems.map((item) => {
                 const active = pathname.startsWith(item.href)
                 const Icon = item.icon
                 return (
@@ -78,9 +85,7 @@ export function BottomNav() {
                     <Link href={item.href} onClick={() => setMenuOpen(false)}>
                       <span className={cn(
                         'flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors',
-                        active
-                          ? 'bg-primary-50 text-primary-700'
-                          : 'text-stone-700 hover:bg-stone-50'
+                        active ? 'bg-primary-50 text-primary-700' : 'text-stone-700 hover:bg-stone-50'
                       )}>
                         <Icon className={cn('h-4 w-4 shrink-0', active ? 'text-primary-600' : 'text-stone-400')} />
                         {item.label}
