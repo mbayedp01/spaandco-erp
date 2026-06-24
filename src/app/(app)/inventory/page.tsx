@@ -17,34 +17,34 @@ const categoryColor: Record<string, string> = {
 export default async function InventoryPage() {
   const spaId = getCurrentSpaId()
   const items = await getInventory(spaId)
-  const low = items.filter((i) => i.quantity < i.min_quantity)
-  const ok  = items.filter((i) => i.quantity >= i.min_quantity)
+  const low   = items.filter((i) => i.quantity < i.min_quantity)
+  const ok    = items.filter((i) => i.quantity >= i.min_quantity)
   const totalValue = items.reduce((s, i) => s + i.quantity * (i.unit_price ?? 0), 0)
 
   return (
     <>
-      <Header title="Gestion des stocks" />
-      <div className="flex-1 overflow-y-auto p-6">
+      <Header title="Stocks" />
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6">
         {low.length > 0 && (
-          <div className="mb-5 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <div className="mb-4 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
             <span>
-              <strong>{low.length} article{low.length > 1 ? 's' : ''} en rupture imminente :</strong>{' '}
+              <strong>{low.length} article{low.length > 1 ? 's' : ''} en rupture :</strong>{' '}
               {low.map((i) => i.name).join(' · ')}
             </span>
           </div>
         )}
 
-        <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
           {[
             { label: 'Références', value: items.length },
             { label: 'Stock OK',   value: ok.length },
             { label: 'Stock bas',  value: low.length },
             { label: 'Valeur totale', value: `${totalValue.toLocaleString('fr-FR')} F` },
           ].map((k) => (
-            <div key={k.label} className="rounded-lg border border-stone-200 bg-white p-5 shadow-xs">
+            <div key={k.label} className="rounded-lg border border-stone-200 bg-white p-4 shadow-xs sm:p-5">
               <p className="text-xs text-stone-500">{k.label}</p>
-              <p className={cn('mt-1 text-xl font-bold', k.label === 'Stock bas' && Number(k.value) > 0 ? 'text-rose-600' : 'text-slate-900')}>
+              <p className={cn('mt-0.5 text-lg font-bold sm:text-xl', k.label === 'Stock bas' && Number(k.value) > 0 ? 'text-rose-600' : 'text-slate-900')}>
                 {k.value}
               </p>
             </div>
@@ -52,11 +52,41 @@ export default async function InventoryPage() {
         </div>
 
         <div className="rounded-lg border border-stone-200 bg-white shadow-xs">
-          <div className="flex items-center justify-between border-b border-stone-200 px-5 py-4">
+          <div className="flex items-center justify-between border-b border-stone-200 px-4 py-3 sm:px-5 sm:py-4">
             <h2 className="font-semibold text-slate-900">Articles ({items.length})</h2>
             <AddInventoryButton />
           </div>
-          <div className="overflow-x-auto">
+
+          {/* Mobile: card list */}
+          <div className="divide-y divide-stone-100 sm:hidden">
+            {items.map((item) => {
+              const isLow = item.quantity < item.min_quantity
+              const pct = Math.min((item.quantity / Math.max(item.min_quantity * 2, 1)) * 100, 100)
+              return (
+                <div key={item.id} className="flex items-center gap-3 px-4 py-3">
+                  <Package className="h-5 w-5 shrink-0 text-stone-300" />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-slate-900">{item.name}</p>
+                    <p className="text-xs text-stone-400">{item.category}</p>
+                    <div className="mt-1.5 flex items-center gap-2">
+                      <div className="h-1.5 w-16 overflow-hidden rounded-full bg-stone-100">
+                        <div className={cn('h-full rounded-full', isLow ? 'bg-rose-400' : 'bg-emerald-500')} style={{ width: `${pct}%` }} />
+                      </div>
+                      <span className={cn('text-xs font-medium', isLow ? 'text-rose-600' : 'text-emerald-600')}>
+                        {item.quantity} {item.unit}
+                      </span>
+                    </div>
+                  </div>
+                  <span className={cn('shrink-0 text-xs font-semibold', isLow ? 'text-rose-600' : 'text-emerald-600')}>
+                    {isLow ? '⚠ Bas' : 'OK'}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Desktop: table */}
+          <div className="hidden overflow-x-auto sm:block">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-stone-100 bg-stone-50 text-left text-xs font-medium text-stone-400">
@@ -64,14 +94,14 @@ export default async function InventoryPage() {
                   <th className="px-5 py-3">Catégorie</th>
                   <th className="px-5 py-3">Stock</th>
                   <th className="hidden px-5 py-3 md:table-cell">Fournisseur</th>
-                  <th className="hidden px-5 py-3 sm:table-cell">P.U.</th>
+                  <th className="px-5 py-3">P.U.</th>
                   <th className="px-5 py-3">Niveau</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-stone-100">
                 {items.map((item) => {
                   const isLow = item.quantity < item.min_quantity
-                  const pct = Math.min((item.quantity / (item.min_quantity * 2)) * 100, 100)
+                  const pct = Math.min((item.quantity / Math.max(item.min_quantity * 2, 1)) * 100, 100)
                   return (
                     <tr key={item.id} className="hover:bg-stone-50">
                       <td className="px-5 py-3.5">
@@ -91,7 +121,7 @@ export default async function InventoryPage() {
                         <span className="ml-1 text-xs text-stone-300">/ min {item.min_quantity}</span>
                       </td>
                       <td className="hidden px-5 py-3.5 text-xs text-stone-500 md:table-cell">{item.supplier}</td>
-                      <td className="hidden px-5 py-3.5 text-slate-700 sm:table-cell">
+                      <td className="px-5 py-3.5 text-slate-700">
                         {item.unit_price ? `${item.unit_price.toLocaleString('fr-FR')} F` : '—'}
                       </td>
                       <td className="px-5 py-3.5">

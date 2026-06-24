@@ -37,14 +37,14 @@ export default async function DashboardPage() {
       <Header title="Tableau de bord" />
       <div className="flex-1 overflow-y-auto p-6">
         {/* KPIs */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
           {kpis.map((kpi) => (
             <KpiCard key={kpi.label} kpi={kpi} />
           ))}
         </div>
 
         {/* Métriques rapides */}
-        <div className="mt-4 grid grid-cols-3 gap-4">
+        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
           {[
             { icon: CalendarDays, label: 'RDV confirmés', value: todayAppointments.filter((a) => a.status === 'confirmed').length, color: 'text-primary-600 bg-primary-50' },
             { icon: Users, label: 'Clients servis', value: new Set(todayAppointments.filter(a => a.status === 'completed').map(a => a.client_name)).size, color: 'text-emerald-600 bg-emerald-50' },

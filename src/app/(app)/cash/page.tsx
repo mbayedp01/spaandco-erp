@@ -25,7 +25,7 @@ export default async function CashPage() {
   return (
     <>
       <Header title="Caisse du jour" />
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6">
         <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
           <div className="flex items-center gap-4 rounded-lg border border-stone-200 bg-white p-5 shadow-xs">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-50">

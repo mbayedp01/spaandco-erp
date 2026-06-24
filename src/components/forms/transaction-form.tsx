@@ -44,7 +44,7 @@ export function AddTransactionButton() {
             <label className={labelCls}>Libellé *</label>
             <input name="label" required className={inputCls} placeholder="Ex: Cheikh Sarr — Massage" />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className={labelCls}>Type *</label>
               <select name="type" required className={inputCls}>
@@ -57,7 +57,7 @@ export function AddTransactionButton() {
               <input name="amount" type="number" min="1" required className={inputCls} placeholder="25000" />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className={labelCls}>Catégorie</label>
               <select name="category" className={inputCls}>

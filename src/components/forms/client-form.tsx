@@ -40,7 +40,7 @@ export function AddClientButton() {
 
       <Modal open={open} onClose={() => setOpen(false)} title="Nouveau client">
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className={labelCls}>Prénom *</label>
               <input name="first_name" required className={inputCls} placeholder="Aïssatou" />

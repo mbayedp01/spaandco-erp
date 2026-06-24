@@ -6,10 +6,13 @@ import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { Sparkles, Menu, X } from 'lucide-react'
 import { navItems } from './nav-items'
+import { SpaSwitcher } from './spa-switcher'
+import { useSpa } from './spa-context'
 
 export function MobileNav() {
   const [open, setOpen] = useState(false)
   const pathname = usePathname()
+  const { establishments, currentSpaId } = useSpa()
 
   return (
     <>
@@ -23,14 +26,12 @@ export function MobileNav() {
 
       {open && (
         <div className="fixed inset-0 z-50 lg:hidden">
-          {/* Overlay */}
           <div
-            className="absolute inset-0 bg-slate-900/50"
+            className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"
             onClick={() => setOpen(false)}
             aria-hidden
           />
-          {/* Drawer */}
-          <aside className="absolute left-0 top-0 flex h-full w-64 flex-col bg-sidebar text-stone-300">
+          <aside className="absolute left-0 top-0 flex h-full w-64 flex-col bg-sidebar text-stone-300 shadow-2xl">
             <div className="flex h-16 items-center justify-between px-6">
               <div className="flex items-center gap-2">
                 <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary-600">
@@ -47,6 +48,12 @@ export function MobileNav() {
               </button>
             </div>
 
+            {establishments.length > 0 && (
+              <div className="border-b border-sidebar-light pb-1">
+                <SpaSwitcher establishments={establishments} currentSpaId={currentSpaId} />
+              </div>
+            )}
+
             <nav className="flex-1 overflow-y-auto px-3 py-4">
               {navItems.map((item) => {
                 const active = pathname.startsWith(item.href)
@@ -61,7 +68,7 @@ export function MobileNav() {
                     <Link href={item.href} onClick={() => setOpen(false)}>
                       <span
                         className={cn(
-                          'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
+                          'flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors',
                           active
                             ? 'bg-primary-600 text-white'
                             : 'text-stone-400 hover:bg-sidebar-light hover:text-white'
@@ -75,6 +82,10 @@ export function MobileNav() {
                 )
               })}
             </nav>
+
+            <div className="border-t border-sidebar-light px-6 py-3 text-xs text-stone-600">
+              Spa and Co · v0.1
+            </div>
           </aside>
         </div>
       )}

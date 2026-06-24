@@ -40,7 +40,7 @@ export function AddStaffButton() {
 
       <Modal open={open} onClose={() => setOpen(false)} title="Nouveau membre du personnel">
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className={labelCls}>Prénom *</label>
               <input name="first_name" required className={inputCls} placeholder="Awa" />
@@ -54,7 +54,7 @@ export function AddStaffButton() {
             <label className={labelCls}>Email</label>
             <input name="email" type="email" className={inputCls} placeholder="awa.sow@spaandco.sn" />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className={labelCls}>Rôle *</label>
               <select name="role" required className={inputCls}>

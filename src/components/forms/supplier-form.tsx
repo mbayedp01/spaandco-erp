@@ -44,7 +44,7 @@ export function AddSupplierButton() {
             <label className={labelCls}>Nom *</label>
             <input name="name" required className={inputCls} placeholder="NaturaBio SN" />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className={labelCls}>Catégorie</label>
               <input name="category" className={inputCls} placeholder="Huiles & Produits naturels" />
@@ -54,7 +54,7 @@ export function AddSupplierButton() {
               <input name="contact" className={inputCls} placeholder="Fatou Diallo" />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className={labelCls}>Téléphone</label>
               <input name="phone" className={inputCls} placeholder="+221 77 100 10 01" />

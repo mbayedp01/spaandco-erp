@@ -51,7 +51,7 @@ export function AddAppointmentButton({ staffNames, serviceNames }: Props) {
             <label className={labelCls}>Client *</label>
             <input name="client_name" required className={inputCls} placeholder="Aïssatou Diop" />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className={labelCls}>Thérapeute</label>
               <select name="staff_name" className={inputCls}>
@@ -67,7 +67,7 @@ export function AddAppointmentButton({ staffNames, serviceNames }: Props) {
               </select>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className={labelCls}>Date *</label>
               <input name="date" type="date" required defaultValue={today} className={inputCls} />
@@ -77,7 +77,7 @@ export function AddAppointmentButton({ staffNames, serviceNames }: Props) {
               <input name="time" type="time" required defaultValue="09:00" className={inputCls} />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className={labelCls}>Durée (min)</label>
               <input name="duration" type="number" min="15" step="15" defaultValue="60" className={inputCls} />

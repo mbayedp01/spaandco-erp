@@ -44,7 +44,7 @@ export function AddInventoryButton() {
             <label className={labelCls}>Nom du produit *</label>
             <input name="name" required className={inputCls} placeholder="Huile de massage argan" />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className={labelCls}>Catégorie</label>
               <select name="category" className={inputCls}>
