@@ -3,11 +3,9 @@ import { NextResponse, type NextRequest } from 'next/server'
 import type { Database } from './types'
 import { canAccess, type UserRole } from '@/lib/roles'
 
-const IS_PLACEHOLDER = process.env.NEXT_PUBLIC_SUPABASE_URL?.includes('placeholder')
-const IS_DEV_PREVIEW = process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_DEV_BYPASS === 'true'
-
 export async function updateSession(request: NextRequest) {
-  // Skip auth enforcement when running without real Supabase credentials or in dev preview
+  const IS_PLACEHOLDER = process.env.NEXT_PUBLIC_SUPABASE_URL?.includes('placeholder')
+  const IS_DEV_PREVIEW = process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_DEV_BYPASS === 'true'
   if (IS_PLACEHOLDER || IS_DEV_PREVIEW) return NextResponse.next({ request })
 
   let supabaseResponse = NextResponse.next({ request })
