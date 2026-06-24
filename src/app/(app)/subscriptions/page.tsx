@@ -1,7 +1,8 @@
 import { Header } from '@/components/layout/header'
 import { getMembershipPlans, getMemberships } from '@/lib/db/subscriptions'
+import { AddSubscriptionButton } from '@/components/forms/subscription-form'
 import { cn } from '@/lib/utils'
-import { Plus, BadgeCheck, TrendingUp } from 'lucide-react'
+import { BadgeCheck, TrendingUp } from 'lucide-react'
 
 const statusConfig: Record<string, { label: string; className: string }> = {
   actif:    { label: 'Actif',    className: 'bg-emerald-50 text-emerald-700' },
@@ -100,10 +101,7 @@ export default async function SubscriptionsPage() {
         <div className="rounded-lg border border-stone-200 bg-white shadow-xs">
           <div className="flex items-center justify-between border-b border-stone-200 px-5 py-4">
             <h2 className="font-semibold text-slate-900">Abonnés ({memberships.length})</h2>
-            <button className="flex items-center gap-2 rounded-md bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700 cursor-pointer">
-              <Plus className="h-4 w-4" />
-              Nouvel abonné
-            </button>
+            <AddSubscriptionButton plans={plans} />
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
