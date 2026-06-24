@@ -31,10 +31,12 @@ export async function createAppointmentAction(formData: FormData): Promise<void>
   revalidatePath('/planning')
 }
 
-export async function updateAppointmentStatusAction(id: string, status: string): Promise<void> {
+export async function updateAppointmentStatusAction(id: string, status: string, notes?: string): Promise<void> {
   const supabase = createServerClient()
   const qb = supabase.from('appointments') as any
-  const { error } = await qb.update({ status }).eq('id', id)
+  const payload: Record<string, unknown> = { status }
+  if (notes !== undefined) payload.notes = notes
+  const { error } = await qb.update(payload).eq('id', id)
   if (error) throw new Error(error.message)
   revalidatePath('/appointments')
   revalidatePath('/dashboard')

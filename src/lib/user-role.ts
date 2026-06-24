@@ -10,3 +10,12 @@ export async function getCurrentUserRole(): Promise<UserRole> {
   const role = user?.user_metadata?.role as UserRole | undefined
   return role ?? 'admin'
 }
+
+export async function getCurrentUserName(): Promise<string | null> {
+  const IS_DEV_BYPASS = process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_DEV_BYPASS === 'true'
+  if (IS_DEV_BYPASS) return null
+
+  const supabase = createServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  return (user?.user_metadata?.name as string | undefined) ?? null
+}

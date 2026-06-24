@@ -79,6 +79,7 @@ export interface Database {
           duration: number | null
           price: number | null
           status: string
+          notes: string | null
           day: number | null
           spa_id: string | null
           created_at: string
