@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useMemo, useTransition } from 'react'
-import { Header } from '@/components/layout/header'
 import type { Database } from '@/lib/supabase/types'
 import { cn } from '@/lib/utils'
 import { Clock, Search, Trash2 } from 'lucide-react'
@@ -56,9 +55,7 @@ export function ServicesView({ services }: { services: Service[] }) {
   }, [services, search, category])
 
   return (
-    <>
-      <Header title="Prestations" />
-      <div className="flex-1 overflow-y-auto p-6">
+    <div className="flex-1 overflow-y-auto p-6">
         <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
           {[
             { label: 'Actives', value: `${active} sur ${services.length} total`, main: String(active) },
@@ -131,6 +128,5 @@ export function ServicesView({ services }: { services: Service[] }) {
           ))}
         </div>
       </div>
-    </>
   )
 }

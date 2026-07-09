@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { Header } from '@/components/layout/header'
 import type { Database } from '@/lib/supabase/types'
 import { CampaignBarChart } from '@/components/reports/charts'
 import { cn } from '@/lib/utils'
@@ -40,9 +39,7 @@ export function MarketingView({ campaigns }: { campaigns: Campaign[] }) {
   const filtered = filter === 'Tous' ? campaigns : campaigns.filter((c) => c.type === filter)
 
   return (
-    <>
-      <Header title="Marketing" />
-      <div className="flex-1 overflow-y-auto p-6">
+    <div className="flex-1 overflow-y-auto p-6">
         <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
           {[
             { label: 'Campagnes actives',  value: active,                        icon: Tag,   color: 'bg-primary-50 text-primary-600' },
@@ -137,6 +134,5 @@ export function MarketingView({ campaigns }: { campaigns: Campaign[] }) {
           </div>
         </div>
       </div>
-    </>
   )
 }
