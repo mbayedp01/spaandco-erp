@@ -1,14 +1,7 @@
 import { createServerClient } from '@/lib/supabase/server'
+import type { AuditLogEntry } from '@/lib/audit-types'
 
-export interface AuditLogEntry {
-  id: string
-  actor_email: string | null
-  actor_role: string | null
-  action: string
-  entity_type: string
-  entity_name: string | null
-  created_at: string
-}
+export type { AuditLogEntry }
 
 export async function getRecentAuditLogs(limit = 20): Promise<AuditLogEntry[]> {
   try {

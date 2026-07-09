@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Bell, X, Clock, User } from 'lucide-react'
-import type { AuditLogEntry } from '@/lib/db/audit'
+import type { AuditLogEntry } from '@/lib/audit-types'
 
 export type { AuditLogEntry }
 
