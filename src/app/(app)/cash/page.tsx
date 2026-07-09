@@ -6,34 +6,82 @@ import { cn } from '@/lib/utils'
 import { TrendingUp, TrendingDown, Wallet } from 'lucide-react'
 import { AddTransactionButton } from '@/components/forms/transaction-form'
 import { PrintReceiptButton } from '@/components/receipts/print-receipt'
+import { CashFilterBar } from './filter-bar'
 
 const methodColor: Record<string, string> = {
-  Carte:          'bg-blue-50 text-blue-700',
-  Cash:           'bg-emerald-50 text-emerald-700',
-  'Mobile Money': 'bg-orange-50 text-orange-700',
-  Virement:       'bg-purple-50 text-purple-700',
+  Carte:           'bg-blue-50 text-blue-700',
+  Cash:            'bg-emerald-50 text-emerald-700',
+  'Mobile Money':  'bg-orange-50 text-orange-700',
+  Virement:        'bg-purple-50 text-purple-700',
+  Wave:            'bg-teal-50 text-teal-700',
+  'Orange Money':  'bg-orange-50 text-orange-800',
 }
 
-export default async function CashPage() {
-  const spaId = getCurrentSpaId()
-  const [transactions, allEstablishments] = await Promise.all([
+function applyFilters(
+  txs: Awaited<ReturnType<typeof getCashTransactions>>,
+  period: string, type: string, caissier: string
+) {
+  const today = new Date().toISOString().split('T')[0]
+  let result = txs
+
+  if (period === 'today') {
+    result = result.filter((t) => t.date === today)
+  } else if (period === 'week') {
+    const d = new Date(); d.setDate(d.getDate() - 7)
+    const from = d.toISOString().split('T')[0]
+    result = result.filter((t) => t.date >= from)
+  } else if (period === 'month') {
+    const d = new Date()
+    const from = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`
+    result = result.filter((t) => t.date >= from)
+  }
+
+  if (type === 'recette' || type === 'charge') {
+    result = result.filter((t) => t.type === type)
+  }
+
+  if (caissier !== 'all' && caissier) {
+    result = result.filter((t) => (t as any).created_by === caissier)
+  }
+
+  return result
+}
+
+export default async function CashPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string>>
+}) {
+  const spaId  = getCurrentSpaId()
+  const params = await searchParams
+
+  const period   = params.period   ?? 'all'
+  const type     = params.type     ?? 'all'
+  const caissier = params.caissier ?? 'all'
+
+  const [allTransactions, allEstablishments] = await Promise.all([
     getCashTransactions(spaId),
     getEstablishments(),
   ])
 
+  const transactions = applyFilters(allTransactions, period, type, caissier)
+
   const establishment = allEstablishments.find((e) => e.id === spaId) ?? allEstablishments[0] ?? {
-    name: 'Spa and Co',
-    city: 'Dakar',
-    address: null,
-    phone: null,
+    name: 'Spa and Co', city: 'Dakar', address: null, phone: null,
   }
 
   const today = new Date().toISOString().split('T')[0]
-  const todayTx = transactions.filter((t) => t.date === today)
+  const todayTx = allTransactions.filter((t) => t.date === today)
 
   const totalEnc = transactions.filter((t) => t.type === 'recette').reduce((s, t) => s + t.amount, 0)
   const totalDep = transactions.filter((t) => t.type === 'charge').reduce((s, t) => s + t.amount, 0)
-  const solde = totalEnc - totalDep
+  const solde    = totalEnc - totalDep
+
+  const caissiers = [...new Set(
+    allTransactions
+      .map((t) => (t as any).created_by as string | null | undefined)
+      .filter((c): c is string => Boolean(c))
+  )]
 
   return (
     <>
@@ -75,7 +123,7 @@ export default async function CashPage() {
         <div className="rounded-lg border border-stone-200 bg-white shadow-xs">
           <div className="flex items-center justify-between border-b border-stone-200 px-5 py-4">
             <h2 className="font-semibold text-slate-900">
-              Transactions récentes
+              Transactions
               {todayTx.length > 0 && (
                 <span className="ml-2 text-sm font-normal text-stone-400">
                   ({todayTx.length} aujourd&apos;hui)
@@ -83,6 +131,16 @@ export default async function CashPage() {
               )}
             </h2>
             <AddTransactionButton />
+          </div>
+
+          {/* Filtres */}
+          <div className="border-b border-stone-100 px-5 py-3">
+            <CashFilterBar
+              period={period}
+              type={type}
+              caissier={caissier}
+              caissiers={caissiers}
+            />
           </div>
 
           <div className="divide-y divide-stone-100">
@@ -96,6 +154,9 @@ export default async function CashPage() {
                 <div className="min-w-0 flex-1">
                   <p className="font-medium text-slate-900">{t.label}</p>
                   {t.category && <p className="text-xs text-stone-400">{t.category}</p>}
+                  {(t as any).created_by && (
+                    <p className="text-xs text-stone-300">{(t as any).created_by}</p>
+                  )}
                 </div>
                 {t.payment_method && (
                   <span className={cn(
@@ -111,16 +172,13 @@ export default async function CashPage() {
                 )}>
                   {t.type === 'recette' ? '+' : '−'}{t.amount.toLocaleString('fr-FR')} F
                 </span>
-                <PrintReceiptButton
-                  transaction={t}
-                  establishment={establishment}
-                />
+                <PrintReceiptButton transaction={t} establishment={establishment} />
               </div>
             ))}
 
             {transactions.length === 0 && (
               <p className="px-5 py-8 text-center text-sm text-stone-400">
-                Aucune transaction pour le moment.
+                Aucune transaction pour ce filtre.
               </p>
             )}
           </div>

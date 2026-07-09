@@ -1,8 +1,15 @@
 import { Bell, Search, LogOut } from 'lucide-react'
 import { MobileNav } from './mobile-nav'
 import { logout } from '@/lib/auth'
+import { getCurrentUserRole } from '@/lib/user-role'
+import { getRecentAuditLogs } from '@/lib/db/audit'
+import { NotificationBell } from './notification-bell'
 
-export function Header({ title, userName }: { title: string; userName?: string }) {
+export async function Header({ title, userName }: { title: string; userName?: string }) {
+  const role    = await getCurrentUserRole()
+  const isAdmin = role === 'admin'
+  const logs    = isAdmin ? await getRecentAuditLogs(25) : []
+
   const initials = userName
     ? userName.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
     : 'A'
@@ -20,10 +27,13 @@ export function Header({ title, userName }: { title: string; userName?: string }
           <span>Rechercher…</span>
         </div>
 
-        <button className="relative rounded-md p-2 text-stone-500 hover:bg-stone-100 cursor-pointer">
-          <Bell className="h-5 w-5" />
-          <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-accent" />
-        </button>
+        {isAdmin ? (
+          <NotificationBell logs={logs} />
+        ) : (
+          <button className="relative rounded-md p-2 text-stone-400 cursor-default">
+            <Bell className="h-5 w-5" />
+          </button>
+        )}
 
         <div className="flex items-center gap-3 border-l border-stone-200 pl-4">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-100 text-sm font-semibold text-primary-700">
@@ -34,7 +44,11 @@ export function Header({ title, userName }: { title: string; userName?: string }
             <p className="text-xs text-stone-400">Admin Général</p>
           </div>
           <form action={logout}>
-            <button type="submit" title="Déconnexion" className="rounded-md p-1.5 text-stone-400 hover:bg-stone-100 hover:text-rose-500 cursor-pointer transition-colors">
+            <button
+              type="submit"
+              title="Déconnexion"
+              className="rounded-md p-1.5 text-stone-400 hover:bg-stone-100 hover:text-rose-500 cursor-pointer transition-colors"
+            >
               <LogOut className="h-4 w-4" />
             </button>
           </form>

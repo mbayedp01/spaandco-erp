@@ -31,3 +31,29 @@ export async function createSupplierAction(formData: FormData): Promise<void> {
   if (error) throw new Error(error.message)
   revalidatePath('/suppliers')
 }
+
+export async function updateSupplierAction(id: string, formData: FormData): Promise<void> {
+  const name          = String(formData.get('name')          ?? '').trim()
+  const category      = String(formData.get('category')      ?? '').trim()
+  const contact       = String(formData.get('contact')       ?? '').trim()
+  const phone         = String(formData.get('phone')         ?? '').trim()
+  const email         = String(formData.get('email')         ?? '').trim()
+  const monthly_spend = Number(formData.get('monthly_spend')) || 0
+  const status        = String(formData.get('status')        ?? 'actif').trim()
+
+  if (!name) throw new Error('Nom du fournisseur requis')
+
+  const supabase = createServerClient()
+  const { error } = await (supabase.from('suppliers') as any)
+    .update({ name, category: category || null, contact: contact || null, phone: phone || null, email: email || null, monthly_spend, status })
+    .eq('id', id)
+  if (error) throw new Error(error.message)
+  revalidatePath('/suppliers')
+}
+
+export async function deleteSupplierAction(id: string): Promise<void> {
+  const supabase = createServerClient()
+  const { error } = await (supabase.from('suppliers') as any).delete().eq('id', id)
+  if (error) throw new Error(error.message)
+  revalidatePath('/suppliers')
+}

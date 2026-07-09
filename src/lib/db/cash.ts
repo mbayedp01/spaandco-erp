@@ -24,6 +24,7 @@ export async function addCashTransaction(payload: {
   payment_method: string
   date?: string
   spa_id?: string
+  created_by?: string | null
 }): Promise<CashTransaction> {
   const supabase = createServerClient()
   const { data, error } = await supabase

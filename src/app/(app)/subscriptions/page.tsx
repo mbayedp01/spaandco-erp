@@ -1,6 +1,8 @@
 import { Header } from '@/components/layout/header'
 import { getMembershipPlans, getMemberships } from '@/lib/db/subscriptions'
+import { getClients } from '@/lib/db/clients'
 import { AddSubscriptionButton } from '@/components/forms/subscription-form'
+import { EditMembershipButton, DeleteMembershipButton } from './membership-actions'
 import { cn } from '@/lib/utils'
 import { BadgeCheck, TrendingUp } from 'lucide-react'
 
@@ -18,7 +20,13 @@ const planBadge: Record<string, string> = {
 }
 
 export default async function SubscriptionsPage() {
-  const [plans, memberships] = await Promise.all([getMembershipPlans(), getMemberships()])
+  const [plans, memberships, clients] = await Promise.all([
+    getMembershipPlans(),
+    getMemberships(),
+    getClients(),
+  ])
+
+  const clientItems = clients.map(c => ({ id: c.id, name: `${c.first_name} ${c.last_name}` }))
 
   const activeCount    = memberships.filter((m) => m.status === 'actif').length
   const monthlyRevenue = memberships
@@ -101,7 +109,7 @@ export default async function SubscriptionsPage() {
         <div className="rounded-lg border border-stone-200 bg-white shadow-xs">
           <div className="flex items-center justify-between border-b border-stone-200 px-5 py-4">
             <h2 className="font-semibold text-slate-900">Abonnés ({memberships.length})</h2>
-            <AddSubscriptionButton plans={plans} />
+            <AddSubscriptionButton plans={plans} clients={clientItems} />
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -113,6 +121,7 @@ export default async function SubscriptionsPage() {
                   <th className="hidden px-5 py-3 md:table-cell">Soins restants</th>
                   <th className="hidden px-5 py-3 lg:table-cell">Prochaine facture</th>
                   <th className="px-5 py-3">Statut</th>
+                  <th className="px-3 py-3"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-stone-100">
@@ -148,6 +157,12 @@ export default async function SubscriptionsPage() {
                       <td className="hidden px-5 py-3.5 text-stone-500 lg:table-cell">{m.next_billing}</td>
                       <td className="px-5 py-3.5">
                         <span className={cn('rounded-full px-2.5 py-0.5 text-xs font-medium', sc.className)}>{sc.label}</span>
+                      </td>
+                      <td className="px-3 py-3.5">
+                        <div className="flex items-center gap-0.5">
+                          <EditMembershipButton membership={m} />
+                          <DeleteMembershipButton id={m.id} />
+                        </div>
                       </td>
                     </tr>
                   )

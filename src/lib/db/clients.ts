@@ -18,6 +18,7 @@ export async function createClient(payload: {
   last_name: string
   email: string
   phone: string
+  birth_date?: string | null
 }): Promise<Client> {
   const supabase = createServerClient()
   const { data, error } = await supabase

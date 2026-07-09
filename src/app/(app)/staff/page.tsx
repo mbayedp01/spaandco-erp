@@ -4,7 +4,7 @@ import { getTodayAppointments } from '@/lib/db/appointments'
 import { getCurrentSpaId } from '@/lib/spa'
 import { cn } from '@/lib/utils'
 import { UserCheck, UserX, Palmtree, Star } from 'lucide-react'
-import { AddStaffButton } from '@/components/forms/staff-form'
+import { AddStaffButton, EditStaffButton, DeleteStaffButton } from '@/components/forms/staff-form'
 
 const statusConfig: Record<string, { label: string; className: string }> = {
   active: { label: 'Actif',  className: 'bg-emerald-50 text-emerald-700' },
@@ -114,6 +114,7 @@ export default async function StaffPage() {
                   <th className="hidden px-5 py-3 lg:table-cell">Note</th>
                   <th className="hidden px-5 py-3 lg:table-cell">Salaire</th>
                   <th className="px-5 py-3">Statut</th>
+                  <th className="px-3 py-3"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-stone-100">
@@ -160,6 +161,12 @@ export default async function StaffPage() {
                         <span className={cn('rounded-full px-2.5 py-0.5 text-xs font-medium', sc.className)}>
                           {sc.label}
                         </span>
+                      </td>
+                      <td className="px-3 py-3.5">
+                        <div className="flex items-center gap-0.5">
+                          <EditStaffButton member={member} />
+                          <DeleteStaffButton id={member.id} />
+                        </div>
                       </td>
                     </tr>
                   )

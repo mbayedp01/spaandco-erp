@@ -31,3 +31,23 @@ export async function createSubscriptionAction(formData: FormData): Promise<void
   if (error) throw new Error(error.message)
   revalidatePath('/subscriptions')
 }
+
+export async function updateMembershipAction(id: string, formData: FormData): Promise<void> {
+  const status         = String(formData.get('status')         ?? 'actif').trim()
+  const soins_restants = String(formData.get('soins_restants') ?? '').trim() || null
+  const next_billing   = String(formData.get('next_billing')   ?? '').trim() || null
+
+  const supabase = createServerClient()
+  const { error } = await (supabase.from('memberships') as any)
+    .update({ status, soins_restants, next_billing })
+    .eq('id', id)
+  if (error) throw new Error(error.message)
+  revalidatePath('/subscriptions')
+}
+
+export async function deleteMembershipAction(id: string): Promise<void> {
+  const supabase = createServerClient()
+  const { error } = await (supabase.from('memberships') as any).delete().eq('id', id)
+  if (error) throw new Error(error.message)
+  revalidatePath('/subscriptions')
+}

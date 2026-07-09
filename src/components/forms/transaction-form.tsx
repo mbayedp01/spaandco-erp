@@ -72,8 +72,10 @@ export function AddTransactionButton() {
             <div>
               <label className={labelCls}>Mode de paiement</label>
               <select name="payment_method" className={inputCls}>
-                <option value="Carte">Carte</option>
                 <option value="Cash">Cash</option>
+                <option value="Wave">Wave</option>
+                <option value="Orange Money">Orange Money</option>
+                <option value="Carte">Carte</option>
                 <option value="Mobile Money">Mobile Money</option>
                 <option value="Virement">Virement</option>
               </select>

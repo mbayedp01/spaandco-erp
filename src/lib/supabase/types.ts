@@ -23,6 +23,7 @@ export interface Database {
           last_name: string
           email: string | null
           phone: string | null
+          birth_date: string | null
           loyalty_points: number
           is_vip: boolean
           last_visit: string | null
@@ -130,11 +131,27 @@ export interface Database {
           amount: number
           type: string
           payment_method: string | null
+          created_by: string | null
           spa_id: string | null
           created_at: string
         }
         Insert: Omit<Database['public']['Tables']['cash_transactions']['Row'], 'id' | 'created_at'>
         Update: Partial<Database['public']['Tables']['cash_transactions']['Insert']>
+      }
+      audit_log: {
+        Row: {
+          id: string
+          actor_email: string | null
+          actor_role: string | null
+          action: string
+          entity_type: string
+          entity_name: string | null
+          details: Record<string, unknown> | null
+          spa_id: string | null
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['audit_log']['Row'], 'id' | 'created_at'>
+        Update: Partial<Database['public']['Tables']['audit_log']['Insert']>
       }
       membership_plans: {
         Row: {

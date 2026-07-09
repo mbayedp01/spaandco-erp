@@ -5,7 +5,6 @@ import { getCurrentSpaId } from '@/lib/spa'
 import { getCurrentUserRole, getCurrentUserName } from '@/lib/user-role'
 import type { Database } from '@/lib/supabase/types'
 import { cn } from '@/lib/utils'
-import { AddAppointmentButton } from '@/components/forms/appointment-form'
 import { getServices } from '@/lib/db/services'
 import { MedecinAppointmentActions } from '../appointments/medecin-actions'
 import { ChevronLeft, ChevronRight, CalendarDays, UserCheck, Clock, Users } from 'lucide-react'
@@ -183,7 +182,6 @@ function AdminCaissierView({
             </button>
           </div>
         </div>
-        <AddAppointmentButton staffNames={staffNames} serviceNames={serviceNames} />
       </div>
 
       {/* KPIs */}

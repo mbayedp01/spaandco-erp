@@ -5,7 +5,7 @@ import { Header } from '@/components/layout/header'
 import type { Database } from '@/lib/supabase/types'
 import { formatDate } from '@/lib/utils'
 import { Star, Search, Users, Crown, Sparkles } from 'lucide-react'
-import { AddClientButton } from '@/components/forms/client-form'
+import { AddClientButton, EditClientButton, DeleteClientButton } from '@/components/forms/client-form'
 import { cn } from '@/lib/utils'
 
 type Client = Database['public']['Tables']['clients']['Row']
@@ -111,6 +111,7 @@ export function ClientsView({ clients }: { clients: Client[] }) {
                 <th className="px-5 py-3">Fidélité</th>
                 <th className="hidden px-5 py-3 lg:table-cell">CA total</th>
                 <th className="hidden px-5 py-3 sm:table-cell">Dernière visite</th>
+                <th className="px-3 py-3"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-stone-100">
@@ -160,6 +161,12 @@ export function ClientsView({ clients }: { clients: Client[] }) {
                     </td>
                     <td className="hidden px-5 py-3.5 text-stone-500 sm:table-cell">
                       {c.last_visit ? formatDate(c.last_visit) : '—'}
+                    </td>
+                    <td className="px-3 py-3.5">
+                      <div className="flex items-center gap-0.5">
+                        <EditClientButton client={c} />
+                        <DeleteClientButton id={c.id} />
+                      </div>
                     </td>
                   </tr>
                 ))

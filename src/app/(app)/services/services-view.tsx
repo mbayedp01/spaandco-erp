@@ -1,10 +1,12 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useTransition } from 'react'
 import { Header } from '@/components/layout/header'
 import type { Database } from '@/lib/supabase/types'
 import { cn } from '@/lib/utils'
-import { Clock, Plus, Search } from 'lucide-react'
+import { Clock, Search, Trash2 } from 'lucide-react'
+import { AddServiceButton, EditServiceButton } from '@/components/forms/service-form'
+import { deleteServiceAction } from '@/app/actions/services'
 
 type Service = Database['public']['Tables']['services']['Row']
 
@@ -16,6 +18,24 @@ const categoryColors: Record<string, string> = {
 }
 
 const ALL_CATEGORIES = ['Tous', 'Massages', 'Soins visage', 'Soins corps', 'Beauté']
+
+function DeleteServiceButton({ id }: { id: string }) {
+  const [pending, startTransition] = useTransition()
+  function handleDelete() {
+    if (!confirm('Supprimer cette prestation ?')) return
+    startTransition(() => deleteServiceAction(id))
+  }
+  return (
+    <button
+      onClick={handleDelete}
+      disabled={pending}
+      className="rounded-md p-1.5 text-stone-400 hover:bg-rose-50 hover:text-rose-600 cursor-pointer transition-colors disabled:opacity-40"
+      title="Supprimer"
+    >
+      <Trash2 className="h-3.5 w-3.5" />
+    </button>
+  )
+}
 
 export function ServicesView({ services }: { services: Service[] }) {
   const [search, setSearch] = useState('')
@@ -78,10 +98,7 @@ export function ServicesView({ services }: { services: Service[] }) {
               />
             </div>
           </div>
-          <button className="flex items-center gap-2 rounded-md bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700 cursor-pointer">
-            <Plus className="h-4 w-4" />
-            Nouvelle prestation
-          </button>
+          <AddServiceButton />
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -92,9 +109,13 @@ export function ServicesView({ services }: { services: Service[] }) {
                   <span className={cn('rounded-full px-2.5 py-0.5 text-xs font-medium', categoryColors[s.category ?? ''] ?? 'bg-stone-100 text-stone-600')}>
                     {s.category}
                   </span>
-                  <span className={cn('rounded-full px-2 py-0.5 text-xs font-medium', s.active ? 'bg-emerald-50 text-emerald-700' : 'bg-stone-100 text-stone-500')}>
-                    {s.active ? 'Actif' : 'Inactif'}
-                  </span>
+                  <div className="flex items-center gap-1">
+                    <span className={cn('rounded-full px-2 py-0.5 text-xs font-medium', s.active ? 'bg-emerald-50 text-emerald-700' : 'bg-stone-100 text-stone-500')}>
+                      {s.active ? 'Actif' : 'Inactif'}
+                    </span>
+                    <EditServiceButton service={s} />
+                    <DeleteServiceButton id={s.id} />
+                  </div>
                 </div>
                 <h3 className="mb-1 text-base font-semibold text-slate-900">{s.name}</h3>
                 {s.description && <p className="mb-4 text-xs text-stone-500 line-clamp-2">{s.description}</p>}

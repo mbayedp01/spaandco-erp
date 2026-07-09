@@ -17,12 +17,27 @@ interface SidebarProps {
   userRole: UserRole
 }
 
+const SPA_ACTIVE: Record<string, string> = {
+  Almadies: 'bg-teal-600 text-white',
+  Plateau:  'bg-violet-600 text-white',
+  Saly:     'bg-amber-600 text-white',
+}
+
+const SPA_BORDER: Record<string, string> = {
+  Almadies: 'border-r-teal-500',
+  Plateau:  'border-r-violet-500',
+  Saly:     'border-r-amber-500',
+}
+
 export function Sidebar({ establishments, currentSpaId, userRole }: SidebarProps) {
-  const pathname = usePathname()
-  const items = getNavItemsForRole(userRole)
+  const pathname  = usePathname()
+  const items     = getNavItemsForRole(userRole)
+  const currentEst = establishments.find((e) => e.id === currentSpaId)
+  const activeClass  = SPA_ACTIVE[currentEst?.name ?? '']  ?? 'bg-primary-600 text-white'
+  const borderClass  = SPA_BORDER[currentEst?.name ?? '']  ?? 'border-r-primary-500'
 
   return (
-    <aside className="hidden w-64 shrink-0 flex-col bg-sidebar text-stone-300 lg:flex">
+    <aside className={cn('hidden w-64 shrink-0 flex-col bg-sidebar text-stone-300 lg:flex border-r-2', borderClass)}>
       <div className="flex h-14 items-center gap-2 px-6">
         <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary-600">
           <Sparkles className="h-3.5 w-3.5 text-white" />
@@ -37,7 +52,7 @@ export function Sidebar({ establishments, currentSpaId, userRole }: SidebarProps
       <nav className="flex-1 overflow-y-auto px-3 py-3">
         {items.map((item) => {
           const active = pathname.startsWith(item.href)
-          const Icon = item.icon
+          const Icon   = item.icon
           return (
             <div key={item.href}>
               {item.section && (
@@ -50,7 +65,7 @@ export function Sidebar({ establishments, currentSpaId, userRole }: SidebarProps
                   className={cn(
                     'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
                     active
-                      ? 'bg-primary-600 text-white'
+                      ? activeClass
                       : 'text-stone-400 hover:bg-sidebar-light hover:text-white'
                   )}
                 >

@@ -3,7 +3,7 @@ import { getInventory } from '@/lib/db/inventory'
 import { getCurrentSpaId } from '@/lib/spa'
 import { cn } from '@/lib/utils'
 import { AlertTriangle, Package } from 'lucide-react'
-import { AddInventoryButton } from '@/components/forms/inventory-form'
+import { AddInventoryButton, EditInventoryButton, DeleteInventoryButton } from '@/components/forms/inventory-form'
 
 const categoryColor: Record<string, string> = {
   Huiles: 'bg-amber-50 text-amber-700',
@@ -96,6 +96,7 @@ export default async function InventoryPage() {
                   <th className="hidden px-5 py-3 md:table-cell">Fournisseur</th>
                   <th className="px-5 py-3">P.U.</th>
                   <th className="px-5 py-3">Niveau</th>
+                  <th className="px-3 py-3"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-stone-100">
@@ -132,6 +133,12 @@ export default async function InventoryPage() {
                           <span className={cn('text-xs font-medium', isLow ? 'text-rose-600' : 'text-emerald-600')}>
                             {isLow ? 'Bas' : 'OK'}
                           </span>
+                        </div>
+                      </td>
+                      <td className="px-3 py-3.5">
+                        <div className="flex items-center gap-0.5">
+                          <EditInventoryButton item={item} />
+                          <DeleteInventoryButton id={item.id} />
                         </div>
                       </td>
                     </tr>
