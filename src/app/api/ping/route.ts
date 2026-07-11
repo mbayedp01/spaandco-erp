@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 export async function GET() {
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-    const anonKey     = process.env.NEXT_PUBLIC_ANON_KEY!
+    const anonKey     = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
     const res = await fetch(
       `${supabaseUrl}/rest/v1/establishments?select=id&limit=1`,
