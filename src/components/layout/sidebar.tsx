@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { Sparkles } from 'lucide-react'
+// cn kept for ROLE_COLORS badge below
 import { getNavItemsForRole } from './nav-items'
 import { SpaSwitcher } from './spa-switcher'
 import { ROLE_LABELS, ROLE_COLORS } from '@/lib/roles'
@@ -17,27 +18,12 @@ interface SidebarProps {
   userRole: UserRole
 }
 
-const SPA_ACTIVE: Record<string, string> = {
-  Almadies: 'bg-teal-600 text-white',
-  Plateau:  'bg-violet-600 text-white',
-  Saly:     'bg-amber-600 text-white',
-}
-
-const SPA_BORDER: Record<string, string> = {
-  Almadies: 'border-r-teal-500',
-  Plateau:  'border-r-violet-500',
-  Saly:     'border-r-amber-500',
-}
-
 export function Sidebar({ establishments, currentSpaId, userRole }: SidebarProps) {
-  const pathname  = usePathname()
-  const items     = getNavItemsForRole(userRole)
-  const currentEst = establishments.find((e) => e.id === currentSpaId)
-  const activeClass  = SPA_ACTIVE[currentEst?.name ?? '']  ?? 'bg-primary-600 text-white'
-  const borderClass  = SPA_BORDER[currentEst?.name ?? '']  ?? 'border-r-primary-500'
+  const pathname = usePathname()
+  const items    = getNavItemsForRole(userRole)
 
   return (
-    <aside className={cn('hidden w-64 shrink-0 flex-col bg-sidebar text-stone-300 lg:flex border-r-2', borderClass)}>
+    <aside className="hidden w-64 shrink-0 flex-col bg-sidebar text-stone-300 lg:flex border-r-2 border-r-primary-600">
       <div className="flex h-14 items-center gap-2 px-6">
         <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary-600">
           <Sparkles className="h-3.5 w-3.5 text-white" />
@@ -65,7 +51,7 @@ export function Sidebar({ establishments, currentSpaId, userRole }: SidebarProps
                   className={cn(
                     'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
                     active
-                      ? activeClass
+                      ? 'bg-primary-600 text-white'
                       : 'text-stone-400 hover:bg-sidebar-light hover:text-white'
                   )}
                 >

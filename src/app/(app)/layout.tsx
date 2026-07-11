@@ -12,9 +12,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     getCurrentUserRole(),
   ])
 
+  const spaSlug = (establishments.find(e => e.id === currentSpaId)?.name ?? '').toLowerCase()
+
   return (
     <SpaProvider establishments={establishments} currentSpaId={currentSpaId} userRole={userRole}>
-      <div className="flex h-screen overflow-hidden bg-stone-50">
+      <div data-spa={spaSlug} className="flex h-screen overflow-hidden bg-stone-50">
         <Sidebar establishments={establishments} currentSpaId={currentSpaId} userRole={userRole} />
         <div className="flex flex-1 flex-col overflow-hidden pb-16 lg:pb-0">
           {children}

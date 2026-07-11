@@ -6,7 +6,8 @@ import { cn } from '@/lib/utils'
 import { switchSpa } from '@/app/actions/spa'
 import { useRouter } from 'next/navigation'
 
-const SPA_ACCENTS: Record<string, string> = {
+// Couleurs fixes pour distinguer les spas dans le dropdown (pas la couleur active)
+const SPA_DOT: Record<string, string> = {
   Almadies: 'bg-teal-500',
   Plateau:  'bg-violet-500',
   Saly:     'bg-amber-500',
@@ -25,7 +26,6 @@ export function SpaSwitcher({
   const [pending, setPending] = useState(false)
   const router = useRouter()
   const current = establishments.find(e => e.id === currentSpaId) ?? establishments[0]
-  const accent = SPA_ACCENTS[current?.name ?? ''] ?? 'bg-primary-500'
 
   async function handleSwitch(spaId: string) {
     if (spaId === currentSpaId) { setOpen(false); return }
@@ -45,7 +45,7 @@ export function SpaSwitcher({
         disabled={pending}
         className="flex w-full items-center gap-2.5 rounded-md bg-white/5 px-3 py-2.5 transition-colors hover:bg-white/10 disabled:opacity-60"
       >
-        <div className={cn('flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[11px] font-bold text-white', accent)}>
+        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[11px] font-bold text-white bg-primary-600">
           {current?.name[0] ?? '?'}
         </div>
         <div className="flex-1 min-w-0 text-left">
@@ -63,7 +63,7 @@ export function SpaSwitcher({
               Établissement
             </p>
             {establishments.map(spa => {
-              const a = SPA_ACCENTS[spa.name] ?? 'bg-primary-500'
+              const dot = SPA_DOT[spa.name] ?? 'bg-primary-500'
               const isActive = spa.id === currentSpaId
               return (
                 <button
@@ -74,7 +74,7 @@ export function SpaSwitcher({
                     isActive && 'bg-white/5'
                   )}
                 >
-                  <div className={cn('flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[11px] font-bold text-white', a)}>
+                  <div className={cn('flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[11px] font-bold text-white', dot)}>
                     {spa.name[0]}
                   </div>
                   <div className="flex-1 text-left">
