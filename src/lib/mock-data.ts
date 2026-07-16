@@ -461,7 +461,6 @@ export interface Establishment {
 export const establishments: Establishment[] = [
   { id: '1', name: 'Spa and Co — Almadies', address: 'Almadies, Dakar', staff: 8, status: 'actif' },
   { id: '2', name: 'Spa and Co — Plateau', address: 'Plateau, Dakar', staff: 5, status: 'actif' },
-  { id: '3', name: 'Spa and Co — Saly', address: 'Saly, Mbour', staff: 4, status: 'ouverture' },
 ]
 
 export interface AppUser {

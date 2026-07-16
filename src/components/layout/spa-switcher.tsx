@@ -6,11 +6,9 @@ import { cn } from '@/lib/utils'
 import { switchSpa } from '@/app/actions/spa'
 import { useRouter } from 'next/navigation'
 
-// Couleurs fixes pour distinguer les spas dans le dropdown (pas la couleur active)
 const SPA_DOT: Record<string, string> = {
   Almadies: 'bg-teal-500',
   Plateau:  'bg-violet-500',
-  Saly:     'bg-amber-500',
 }
 
 type Establishment = { id: string; name: string; city: string }
