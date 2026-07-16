@@ -4,14 +4,20 @@ on:
   schedule:
     # Tous les 5 jours à 08h00 UTC
     - cron: '0 8 */5 * *'
-  workflow_dispatch: # déclenche manuel si besoin
+  workflow_dispatch:
 
 jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping Supabase via l'API de l'app
+      - name: Ping Supabase directement
+        continue-on-error: true
         run: |
-          STATUS=$(curl -s -L -o /dev/null -w "%{http_code}" --max-time 15 "${{ secrets.SITE_URL }}/api/ping" 2>/dev/null) || true
-          echo "HTTP status: ${STATUS:-000}"
-          echo "Ping envoyé — Supabase reste actif ✓"
+          curl -s --max-time 15 \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
+            "${{ secrets.SUPABASE_URL }}/rest/v1/establishments?select=id&limit=1" \
+            -o /dev/null -w "HTTP %{http_code}\n"
+
+      - name: Résultat
+        run: echo "Supabase keep-alive envoyé ✓"
