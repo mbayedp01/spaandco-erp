@@ -1,18 +1,19 @@
 import { Bell, Search, LogOut } from 'lucide-react'
 import { MobileNav } from './mobile-nav'
 import { logout } from '@/lib/auth'
-import { getCurrentUserRole } from '@/lib/user-role'
+import { getCurrentUserRole, getCurrentUserName } from '@/lib/user-role'
 import { getRecentAuditLogs } from '@/lib/db/audit'
 import { NotificationBell } from './notification-bell'
+import { ROLE_LABELS } from '@/lib/roles'
 
-export async function Header({ title, userName }: { title: string; userName?: string }) {
-  const role    = await getCurrentUserRole()
+export async function Header({ title }: { title: string }) {
+  const [role, userName] = await Promise.all([getCurrentUserRole(), getCurrentUserName()])
   const isAdmin = role === 'admin'
   const logs    = isAdmin ? await getRecentAuditLogs(25) : []
 
   const initials = userName
     ? userName.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
-    : 'A'
+    : ROLE_LABELS[role][0]
 
   return (
     <header className="flex h-16 shrink-0 items-center justify-between border-b border-stone-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 sm:px-6">
@@ -40,8 +41,8 @@ export async function Header({ title, userName }: { title: string; userName?: st
             {initials}
           </div>
           <div className="hidden text-sm sm:block">
-            <p className="font-medium text-slate-900 dark:text-white">{userName ?? 'Administrateur'}</p>
-            <p className="text-xs text-stone-400">Admin Général</p>
+            <p className="font-medium text-slate-900 dark:text-white">{userName ?? ROLE_LABELS[role]}</p>
+            <p className="text-xs text-stone-400">{ROLE_LABELS[role]}</p>
           </div>
           <form action={logout}>
             <button
