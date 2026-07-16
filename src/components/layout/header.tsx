@@ -15,14 +15,14 @@ export async function Header({ title, userName }: { title: string; userName?: st
     : 'A'
 
   return (
-    <header className="flex h-16 shrink-0 items-center justify-between border-b border-stone-200 bg-white px-4 sm:px-6">
+    <header className="flex h-16 shrink-0 items-center justify-between border-b border-stone-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 sm:px-6">
       <div className="flex items-center gap-2">
         <MobileNav />
-        <h1 className="text-lg font-semibold text-slate-900">{title}</h1>
+        <h1 className="text-lg font-semibold text-slate-900 dark:text-white">{title}</h1>
       </div>
 
       <div className="flex items-center gap-4">
-        <div className="hidden items-center gap-2 rounded-md border border-stone-200 px-3 py-1.5 text-sm text-stone-400 md:flex">
+        <div className="hidden items-center gap-2 rounded-md border border-stone-200 dark:border-slate-600 dark:bg-slate-700 px-3 py-1.5 text-sm text-stone-400 dark:text-slate-400 md:flex">
           <Search className="h-4 w-4" />
           <span>Rechercher…</span>
         </div>
@@ -40,7 +40,7 @@ export async function Header({ title, userName }: { title: string; userName?: st
             {initials}
           </div>
           <div className="hidden text-sm sm:block">
-            <p className="font-medium text-slate-900">{userName ?? 'Administrateur'}</p>
+            <p className="font-medium text-slate-900 dark:text-white">{userName ?? 'Administrateur'}</p>
             <p className="text-xs text-stone-400">Admin Général</p>
           </div>
           <form action={logout}>

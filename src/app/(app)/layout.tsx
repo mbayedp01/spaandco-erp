@@ -12,13 +12,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     getCurrentUserRole(),
   ])
 
-  const spaSlug = (establishments.find(e => e.id === currentSpaId)?.name ?? '').toLowerCase()
+  const spaName = establishments.find(e => e.id === currentSpaId)?.name ?? ''
+  const isDark  = spaName === 'Plateau'
 
   return (
     <SpaProvider establishments={establishments} currentSpaId={currentSpaId} userRole={userRole}>
-      <div data-spa={spaSlug} className="flex h-screen overflow-hidden bg-stone-50">
+      <div className={`flex h-screen overflow-hidden ${isDark ? 'dark' : ''}`}>
         <Sidebar establishments={establishments} currentSpaId={currentSpaId} userRole={userRole} />
-        <div className="flex flex-1 flex-col overflow-hidden pb-16 lg:pb-0">
+        <div className="flex flex-1 flex-col overflow-hidden pb-16 lg:pb-0 bg-stone-50 dark:bg-slate-900">
           {children}
         </div>
       </div>

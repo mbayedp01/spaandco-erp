@@ -2,9 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ── Palette dynamique par établissement ─────────────────── */
-/* Almadies : teal (défaut) */
-:root, [data-spa="almadies"] {
+/* ── Palette teal unique pour tous les spas ──────────────── */
+:root {
   --p-50:  240 253 250;
   --p-100: 204 251 241;
   --p-200: 153 246 228;
@@ -15,32 +14,6 @@
   --p-700:  15 118 110;
   --p-800:  17  94  89;
   --p-900:  19  78  74;
-}
-/* Plateau : violet */
-[data-spa="plateau"] {
-  --p-50:  245 243 255;
-  --p-100: 237 233 254;
-  --p-200: 221 214 254;
-  --p-300: 196 181 253;
-  --p-400: 167 139 250;
-  --p-500: 139  92 246;
-  --p-600: 124  58 237;
-  --p-700: 109  40 217;
-  --p-800:  91  33 182;
-  --p-900:  76  29 149;
-}
-/* Saly : amber */
-[data-spa="saly"] {
-  --p-50:  255 251 235;
-  --p-100: 254 243 199;
-  --p-200: 253 230 138;
-  --p-300: 252 211  77;
-  --p-400: 251 191  36;
-  --p-500: 245 158  11;
-  --p-600: 217 119   6;
-  --p-700: 180  83   9;
-  --p-800: 146  64  14;
-  --p-900: 120  53  15;
 }
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap');
