@@ -61,6 +61,7 @@ export interface Database {
           duration: number | null
           price: number | null
           active: boolean
+          spa_id: string | null
           created_at: string
         }
         Insert: Omit<Database['public']['Tables']['services']['Row'], 'id' | 'created_at'>

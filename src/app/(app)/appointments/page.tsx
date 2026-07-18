@@ -27,7 +27,7 @@ export default async function AppointmentsPage() {
     getCurrentUserRole(),
     getCurrentUserName(),
     getStaff(spaId),
-    getServices(),
+    getServices(spaId),
     getClients(),
   ])
 

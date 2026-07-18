@@ -326,7 +326,7 @@ export default async function PlanningPage() {
     getCurrentUserRole(),
     getCurrentUserName(),
     getStaff(spaId),
-    getServices(),
+    getServices(spaId),
   ])
 
   const weekDays   = getWeekDates()
