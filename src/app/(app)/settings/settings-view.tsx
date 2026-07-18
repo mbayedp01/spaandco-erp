@@ -1,239 +1,1012 @@
 'use client'
 
-import { establishments, appUsers } from '@/lib/mock-data'
+import { useState, useTransition, useCallback, useEffect } from 'react'
+import {
+  Building2, Clock, Bell, Shield, Users, CreditCard, Calendar,
+  Activity, ChevronRight, Check, AlertCircle, Pencil, Plus,
+  Globe, Phone, Mail, MapPin, Instagram, Facebook, ExternalLink,
+  Eye, EyeOff, Wifi,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { Building2, Clock, Bell, Shield, Users, MapPin, Plus, Pencil } from 'lucide-react'
-import { useState } from 'react'
+import { updateEstablishment } from '@/app/actions/establishments'
+import type { Database } from '@/lib/supabase/types'
+import type { AuditLogEntry } from '@/lib/audit-types'
+import type { AppUser } from '@/lib/mock-data'
 
-const sections = [
-  {
-    icon: Building2,
-    title: 'Établissement principal',
-    fields: [
-      { label: 'Nom', value: 'Spa and Co', type: 'text' },
-      { label: 'Adresse', value: 'Almadies, Dakar, Sénégal', type: 'text' },
-      { label: 'Téléphone', value: '+221 33 800 00 00', type: 'text' },
-      { label: 'Email', value: 'contact@spaandco.sn', type: 'email' },
-      { label: 'Site web', value: 'www.spaandco.sn', type: 'text' },
-    ],
-  },
-  {
-    icon: Clock,
-    title: "Horaires d'ouverture",
-    fields: [
-      { label: 'Lundi – Vendredi', value: '08:00 – 20:00', type: 'text' },
-      { label: 'Samedi', value: '09:00 – 18:00', type: 'text' },
-      { label: 'Dimanche', value: 'Fermé', type: 'text' },
-      { label: 'Durée min. RDV', value: '30 minutes', type: 'text' },
-    ],
-  },
-  {
-    icon: Bell,
-    title: 'Notifications',
-    toggles: [
-      { label: 'Rappels RDV par SMS', enabled: true },
-      { label: 'Confirmation par email', enabled: true },
-      { label: 'Alertes stock bas', enabled: true },
-      { label: 'Rapports hebdomadaires', enabled: false },
-      { label: 'Nouvelles inscriptions', enabled: true },
-    ],
-  },
-  {
-    icon: Shield,
-    title: 'Accès & Sécurité',
-    fields: [
-      { label: 'Identifiant admin', value: 'admin@spaandco.sn', type: 'text' },
-      { label: 'Mot de passe', value: '••••••••', type: 'password' },
-      { label: 'Authentification 2FA', value: 'Activée', type: 'text' },
-    ],
-  },
+type Establishment = Database['public']['Tables']['establishments']['Row']
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+type Section =
+  | 'etablissement'
+  | 'horaires'
+  | 'notifications'
+  | 'rendez-vous'
+  | 'paiements'
+  | 'utilisateurs'
+  | 'securite'
+  | 'journal'
+
+const NAV: { key: Section; icon: React.ElementType; label: string; desc: string }[] = [
+  { key: 'etablissement', icon: Building2,  label: 'Établissement',  desc: 'Nom, adresse, contact'       },
+  { key: 'horaires',      icon: Clock,       label: 'Horaires',       desc: "Jours et heures d'ouverture" },
+  { key: 'notifications', icon: Bell,        label: 'Notifications',  desc: 'Alertes et rappels'          },
+  { key: 'rendez-vous',   icon: Calendar,    label: 'Rendez-vous',    desc: 'Paramètres de réservation'   },
+  { key: 'paiements',     icon: CreditCard,  label: 'Paiements',      desc: 'Méthodes et facturation'     },
+  { key: 'utilisateurs',  icon: Users,       label: 'Utilisateurs',   desc: 'Comptes et rôles'            },
+  { key: 'securite',      icon: Shield,      label: 'Sécurité',       desc: 'Accès et confidentialité'    },
+  { key: 'journal',       icon: Activity,    label: 'Journal',        desc: "Historique d'activité"       },
 ]
 
-export function SettingsView() {
-  const [tab, setTab] = useState<'general' | 'etablissements' | 'utilisateurs'>('general')
+// ── Local storage hook ─────────────────────────────────────────────────────────
+
+function useLocalPref<T>(key: string, initial: T): [T, (v: T | ((prev: T) => T)) => void] {
+  const [value, setValue] = useState<T>(initial)
+  useEffect(() => {
+    try {
+      const s = localStorage.getItem(`spa-cfg-${key}`)
+      if (s) setValue(JSON.parse(s))
+    } catch {}
+  }, [key])
+  const set = useCallback(
+    (v: T | ((prev: T) => T)) =>
+      setValue((prev) => {
+        const next = typeof v === 'function' ? (v as (p: T) => T)(prev) : v
+        try { localStorage.setItem(`spa-cfg-${key}`, JSON.stringify(next)) } catch {}
+        return next
+      }),
+    [key],
+  )
+  return [value, set]
+}
+
+// ── Toast ──────────────────────────────────────────────────────────────────────
+
+type Toast = { id: number; type: 'success' | 'error'; msg: string }
+
+function useToasts() {
+  const [toasts, setToasts] = useState<Toast[]>([])
+  const push = useCallback((type: Toast['type'], msg: string) => {
+    const id = Date.now()
+    setToasts((p) => [...p, { id, type, msg }])
+    setTimeout(() => setToasts((p) => p.filter((t) => t.id !== id)), 3500)
+  }, [])
+  return { toasts, push }
+}
+
+// ── Shared UI atoms ────────────────────────────────────────────────────────────
+
+function SectionHeader({ icon: Icon, title, subtitle }: { icon: React.ElementType; title: string; subtitle?: string }) {
+  return (
+    <div className="mb-6">
+      <div className="flex items-center gap-3">
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-50 dark:bg-primary-900/30">
+          <Icon className="h-5 w-5 text-primary-600" />
+        </div>
+        <div>
+          <h2 className="text-base font-semibold text-slate-900 dark:text-white">{title}</h2>
+          {subtitle && <p className="text-xs text-stone-400 dark:text-slate-500">{subtitle}</p>}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function Card({ children, className }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div className={cn('rounded-xl border border-stone-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-xs', className)}>
+      {children}
+    </div>
+  )
+}
+
+function FieldRow({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-start justify-between gap-4 py-3.5">
+      <div className="min-w-0 shrink-0">
+        <p className="text-sm font-medium text-slate-700 dark:text-slate-300">{label}</p>
+        {hint && <p className="mt-0.5 text-xs text-stone-400 dark:text-slate-500">{hint}</p>}
+      </div>
+      <div className="shrink-0">{children}</div>
+    </div>
+  )
+}
+
+function Input({
+  value, onChange, placeholder, type = 'text', className,
+}: {
+  value: string; onChange: (v: string) => void; placeholder?: string; type?: string; className?: string
+}) {
+  return (
+    <input
+      type={type}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      className={cn(
+        'w-52 rounded-lg border border-stone-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-1.5 text-sm text-slate-900 dark:text-white placeholder:text-stone-300 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900/30 transition',
+        className,
+      )}
+    />
+  )
+}
+
+function Toggle({ enabled, onChange }: { enabled: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <button
+      type="button"
+      onClick={() => onChange(!enabled)}
+      className={cn(
+        'relative inline-flex h-5 w-9 cursor-pointer rounded-full transition-colors duration-200',
+        enabled ? 'bg-primary-600' : 'bg-stone-200 dark:bg-slate-600',
+      )}
+    >
+      <span
+        className={cn(
+          'absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform duration-200',
+          enabled ? 'translate-x-4' : 'translate-x-0.5',
+        )}
+      />
+    </button>
+  )
+}
+
+function SaveButton({ onClick, pending, label = 'Enregistrer' }: { onClick: () => void; pending?: boolean; label?: string }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={pending}
+      className="flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-60 transition cursor-pointer"
+    >
+      {pending ? (
+        <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+      ) : (
+        <Check className="h-4 w-4" />
+      )}
+      {label}
+    </button>
+  )
+}
+
+function LocalBadge() {
+  return (
+    <span className="flex items-center gap-1 rounded-full bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-2 py-0.5 text-xs text-amber-700 dark:text-amber-400">
+      <Wifi className="h-3 w-3" />
+      Sauvegardé localement
+    </span>
+  )
+}
+
+// ── Section: Établissement ─────────────────────────────────────────────────────
+
+type EstabForm = { name: string; city: string; address: string; phone: string; email: string; website: string; description: string; instagram: string; facebook: string }
+
+function EtablissementSection({
+  establishment,
+  onSave,
+  pending,
+}: {
+  establishment: Establishment | null
+  onSave: (form: EstabForm) => void
+  pending: boolean
+}) {
+  const [form, setForm] = useState<EstabForm>({
+    name:        establishment?.name    ?? 'Spa and Co',
+    city:        establishment?.city    ?? 'Dakar',
+    address:     establishment?.address ?? '',
+    phone:       establishment?.phone   ?? '',
+    email:       'contact@spaandco.sn',
+    website:     'www.spaandco.sn',
+    description: 'Espace de bien-être et de beauté au cœur de Dakar.',
+    instagram:   '@spaandco_dakar',
+    facebook:    'SpaAndCoDakar',
+  })
+  const f = (k: keyof EstabForm) => (v: string) => setForm((p) => ({ ...p, [k]: v }))
 
   return (
-    <div className="flex-1 overflow-y-auto p-6">
-      {/* Onglets */}
-      <div className="mb-6 flex gap-1 rounded-lg border border-stone-200 bg-stone-50 p-1 w-fit">
-        {([
-          { key: 'general', label: 'Général' },
-          { key: 'etablissements', label: 'Établissements' },
-          { key: 'utilisateurs', label: 'Utilisateurs' },
-        ] as const).map((t) => (
+    <div className="space-y-5">
+      <SectionHeader icon={Building2} title="Établissement" subtitle="Informations de base enregistrées dans la base de données" />
+
+      <Card>
+        <div className="px-5 py-1 divide-y divide-stone-100 dark:divide-slate-700">
+          <FieldRow label="Nom du spa" hint="Affiché dans toute l'application">
+            <Input value={form.name} onChange={f('name')} placeholder="Nom de l'établissement" />
+          </FieldRow>
+          <FieldRow label="Ville">
+            <Input value={form.city} onChange={f('city')} placeholder="Dakar" />
+          </FieldRow>
+          <FieldRow label="Adresse complète">
+            <Input value={form.address} onChange={f('address')} placeholder="Rue, quartier…" />
+          </FieldRow>
+          <FieldRow label="Téléphone">
+            <Input value={form.phone} onChange={f('phone')} type="tel" placeholder="+221 33 000 00 00" />
+          </FieldRow>
+        </div>
+        <div className="flex justify-end border-t border-stone-100 dark:border-slate-700 px-5 py-3">
+          <SaveButton onClick={() => onSave(form)} pending={pending} />
+        </div>
+      </Card>
+
+      <Card>
+        <div className="flex items-center justify-between border-b border-stone-100 dark:border-slate-700 px-5 py-3.5">
+          <p className="text-sm font-semibold text-slate-900 dark:text-white">Coordonnées & présence en ligne</p>
+          <LocalBadge />
+        </div>
+        <div className="px-5 py-1 divide-y divide-stone-100 dark:divide-slate-700">
+          <FieldRow label="Email de contact" hint="Visible par les clients">
+            <div className="flex items-center gap-2">
+              <Mail className="h-4 w-4 text-stone-400" />
+              <Input value={form.email} onChange={f('email')} type="email" placeholder="contact@spa.sn" />
+            </div>
+          </FieldRow>
+          <FieldRow label="Site web">
+            <div className="flex items-center gap-2">
+              <Globe className="h-4 w-4 text-stone-400" />
+              <Input value={form.website} onChange={f('website')} placeholder="www.spa.sn" />
+            </div>
+          </FieldRow>
+          <FieldRow label="Instagram">
+            <div className="flex items-center gap-2">
+              <Instagram className="h-4 w-4 text-stone-400" />
+              <Input value={form.instagram} onChange={f('instagram')} placeholder="@spa" />
+            </div>
+          </FieldRow>
+          <FieldRow label="Facebook">
+            <div className="flex items-center gap-2">
+              <Facebook className="h-4 w-4 text-stone-400" />
+              <Input value={form.facebook} onChange={f('facebook')} placeholder="NomPage" />
+            </div>
+          </FieldRow>
+        </div>
+        <div className="px-5 py-3 border-t border-stone-100 dark:border-slate-700">
+          <p className="text-xs text-stone-400 dark:text-slate-500">
+            Ces informations sont sauvegardées dans votre navigateur. Pour une persistance complète, exécutez la migration SQL fournie.
+          </p>
+        </div>
+      </Card>
+
+      <Card>
+        <div className="px-5 py-3.5 border-b border-stone-100 dark:border-slate-700">
+          <p className="text-sm font-semibold text-slate-900 dark:text-white">Description</p>
+        </div>
+        <div className="px-5 py-4">
+          <textarea
+            value={form.description}
+            onChange={(e) => f('description')(e.target.value)}
+            rows={3}
+            placeholder="Décrivez votre établissement…"
+            className="w-full rounded-lg border border-stone-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm text-slate-900 dark:text-white placeholder:text-stone-300 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900/30 transition resize-none"
+          />
+        </div>
+      </Card>
+    </div>
+  )
+}
+
+// ── Section: Horaires ──────────────────────────────────────────────────────────
+
+const DAYS = [
+  { key: 'lundi',    label: 'Lundi'    },
+  { key: 'mardi',    label: 'Mardi'    },
+  { key: 'mercredi', label: 'Mercredi' },
+  { key: 'jeudi',    label: 'Jeudi'    },
+  { key: 'vendredi', label: 'Vendredi' },
+  { key: 'samedi',   label: 'Samedi'   },
+  { key: 'dimanche', label: 'Dimanche' },
+] as const
+
+type DayKey = (typeof DAYS)[number]['key']
+type Horaires = Record<DayKey, { open: boolean; start: string; end: string }>
+
+function HorairesSection({ horaires, setHoraires, onSave }: {
+  horaires: Horaires
+  setHoraires: (v: Horaires | ((p: Horaires) => Horaires)) => void
+  onSave: () => void
+}) {
+  const toggle = (day: DayKey) =>
+    setHoraires((p) => ({ ...p, [day]: { ...p[day], open: !p[day].open } }))
+  const setTime = (day: DayKey, field: 'start' | 'end', v: string) =>
+    setHoraires((p) => ({ ...p, [day]: { ...p[day], [field]: v } }))
+
+  return (
+    <div className="space-y-5">
+      <SectionHeader icon={Clock} title="Horaires d'ouverture" subtitle="Définissez vos jours et heures d'ouverture" />
+      <Card>
+        <div className="px-5 py-1 divide-y divide-stone-100 dark:divide-slate-700">
+          {DAYS.map(({ key, label }) => (
+            <div key={key} className="flex items-center gap-4 py-3">
+              <div className="w-24 shrink-0">
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{label}</span>
+              </div>
+              <Toggle enabled={horaires[key].open} onChange={() => toggle(key)} />
+              {horaires[key].open ? (
+                <div className="flex items-center gap-2 text-sm">
+                  <input
+                    type="time"
+                    value={horaires[key].start}
+                    onChange={(e) => setTime(key, 'start', e.target.value)}
+                    className="rounded-lg border border-stone-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-2 py-1 text-sm text-slate-900 dark:text-white focus:border-primary-400 focus:outline-none"
+                  />
+                  <span className="text-stone-400">→</span>
+                  <input
+                    type="time"
+                    value={horaires[key].end}
+                    onChange={(e) => setTime(key, 'end', e.target.value)}
+                    className="rounded-lg border border-stone-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-2 py-1 text-sm text-slate-900 dark:text-white focus:border-primary-400 focus:outline-none"
+                  />
+                </div>
+              ) : (
+                <span className="text-sm text-stone-400 dark:text-slate-500 italic">Fermé</span>
+              )}
+            </div>
+          ))}
+        </div>
+        <div className="flex items-center justify-between border-t border-stone-100 dark:border-slate-700 px-5 py-3">
+          <LocalBadge />
+          <SaveButton onClick={onSave} label="Enregistrer les horaires" />
+        </div>
+      </Card>
+    </div>
+  )
+}
+
+// ── Section: Notifications ─────────────────────────────────────────────────────
+
+type Notifs = {
+  rdvSms: boolean; rdvEmail: boolean; rdvWhatsapp: boolean
+  stockBas: boolean; rapports: boolean; nouveaux: boolean; annulation: boolean
+}
+
+function NotificationsSection({ notifs, setNotifs, onSave }: {
+  notifs: Notifs
+  setNotifs: (v: Notifs | ((p: Notifs) => Notifs)) => void
+  onSave: () => void
+}) {
+  const tog = (k: keyof Notifs) => setNotifs((p) => ({ ...p, [k]: !p[k] }))
+
+  const groups = [
+    {
+      title: 'Rendez-vous',
+      items: [
+        { key: 'rdvSms'     as keyof Notifs, label: 'Rappels RDV par SMS',      hint: 'Envoyé 2h avant le RDV'          },
+        { key: 'rdvEmail'   as keyof Notifs, label: 'Confirmation par email',    hint: 'Email automatique à la création'  },
+        { key: 'rdvWhatsapp'as keyof Notifs, label: 'Rappels WhatsApp',          hint: 'Nécessite une intégration active' },
+        { key: 'annulation' as keyof Notifs, label: 'Alerte annulation client',  hint: 'Notifier le responsable'          },
+      ],
+    },
+    {
+      title: 'Opérations',
+      items: [
+        { key: 'stockBas'  as keyof Notifs, label: 'Alertes stock bas',       hint: 'Quand le stock passe sous le minimum' },
+        { key: 'nouveaux'  as keyof Notifs, label: 'Nouvelles inscriptions',   hint: 'Chaque nouveau compte client'         },
+        { key: 'rapports'  as keyof Notifs, label: 'Rapports hebdomadaires',   hint: 'Résumé envoyé le lundi matin'         },
+      ],
+    },
+  ]
+
+  return (
+    <div className="space-y-5">
+      <SectionHeader icon={Bell} title="Notifications" subtitle="Configurez vos alertes et rappels automatiques" />
+      {groups.map((g) => (
+        <Card key={g.title}>
+          <div className="border-b border-stone-100 dark:border-slate-700 px-5 py-3.5">
+            <p className="text-sm font-semibold text-slate-900 dark:text-white">{g.title}</p>
+          </div>
+          <div className="px-5 py-1 divide-y divide-stone-100 dark:divide-slate-700">
+            {g.items.map(({ key, label, hint }) => (
+              <FieldRow key={key} label={label} hint={hint}>
+                <Toggle enabled={notifs[key]} onChange={() => tog(key)} />
+              </FieldRow>
+            ))}
+          </div>
+        </Card>
+      ))}
+      <div className="flex items-center justify-between">
+        <LocalBadge />
+        <SaveButton onClick={onSave} label="Enregistrer" />
+      </div>
+    </div>
+  )
+}
+
+// ── Section: Rendez-vous ───────────────────────────────────────────────────────
+
+type RdvSettings = { dureeMin: number; buffer: number; confirmAuto: boolean; annulationH: number; rappelH: number; nbMaxJour: number }
+
+function RendezVousSection({ settings, setSettings, onSave }: {
+  settings: RdvSettings
+  setSettings: (v: RdvSettings | ((p: RdvSettings) => RdvSettings)) => void
+  onSave: () => void
+}) {
+  const n = (k: keyof RdvSettings) => (v: string) =>
+    setSettings((p) => ({ ...p, [k]: parseInt(v, 10) || 0 }))
+
+  return (
+    <div className="space-y-5">
+      <SectionHeader icon={Calendar} title="Rendez-vous" subtitle="Paramètres de gestion des réservations" />
+      <Card>
+        <div className="border-b border-stone-100 dark:border-slate-700 px-5 py-3.5">
+          <p className="text-sm font-semibold text-slate-900 dark:text-white">Durées & Capacité</p>
+        </div>
+        <div className="px-5 py-1 divide-y divide-stone-100 dark:divide-slate-700">
+          <FieldRow label="Durée minimum d'un RDV" hint="En minutes">
+            <div className="flex items-center gap-2">
+              <Input value={String(settings.dureeMin)} onChange={n('dureeMin')} type="number" className="w-20 text-center" />
+              <span className="text-sm text-stone-400">min</span>
+            </div>
+          </FieldRow>
+          <FieldRow label="Tampon entre RDV" hint="Pause entre deux réservations (min)">
+            <div className="flex items-center gap-2">
+              <Input value={String(settings.buffer)} onChange={n('buffer')} type="number" className="w-20 text-center" />
+              <span className="text-sm text-stone-400">min</span>
+            </div>
+          </FieldRow>
+          <FieldRow label="Nb max de RDV par jour" hint="0 = illimité">
+            <div className="flex items-center gap-2">
+              <Input value={String(settings.nbMaxJour)} onChange={n('nbMaxJour')} type="number" className="w-20 text-center" />
+              <span className="text-sm text-stone-400">RDV</span>
+            </div>
+          </FieldRow>
+        </div>
+      </Card>
+
+      <Card>
+        <div className="border-b border-stone-100 dark:border-slate-700 px-5 py-3.5">
+          <p className="text-sm font-semibold text-slate-900 dark:text-white">Politique & Rappels</p>
+        </div>
+        <div className="px-5 py-1 divide-y divide-stone-100 dark:divide-slate-700">
+          <FieldRow label="Confirmation automatique" hint="Les RDV sont confirmés sans validation manuelle">
+            <Toggle enabled={settings.confirmAuto} onChange={(v) => setSettings((p) => ({ ...p, confirmAuto: v }))} />
+          </FieldRow>
+          <FieldRow label="Délai d'annulation" hint="Heures avant le RDV où l'annulation est encore possible">
+            <div className="flex items-center gap-2">
+              <Input value={String(settings.annulationH)} onChange={n('annulationH')} type="number" className="w-20 text-center" />
+              <span className="text-sm text-stone-400">h avant</span>
+            </div>
+          </FieldRow>
+          <FieldRow label="Rappel automatique" hint="Envoyé X heures avant le RDV">
+            <div className="flex items-center gap-2">
+              <Input value={String(settings.rappelH)} onChange={n('rappelH')} type="number" className="w-20 text-center" />
+              <span className="text-sm text-stone-400">h avant</span>
+            </div>
+          </FieldRow>
+        </div>
+        <div className="flex items-center justify-between border-t border-stone-100 dark:border-slate-700 px-5 py-3">
+          <LocalBadge />
+          <SaveButton onClick={onSave} label="Enregistrer" />
+        </div>
+      </Card>
+    </div>
+  )
+}
+
+// ── Section: Paiements ─────────────────────────────────────────────────────────
+
+type PaiementSettings = {
+  devise: string; tva: number; especes: boolean; carte: boolean
+  wave: boolean; orangeMoney: boolean; virement: boolean; recu: boolean
+}
+
+function PaiementsSection({ settings, setSettings, onSave }: {
+  settings: PaiementSettings
+  setSettings: (v: PaiementSettings | ((p: PaiementSettings) => PaiementSettings)) => void
+  onSave: () => void
+}) {
+  const tog = (k: keyof PaiementSettings) => setSettings((p) => ({ ...p, [k]: !p[k] }))
+
+  const methods = [
+    { key: 'especes'    as keyof PaiementSettings, label: 'Espèces',           icon: '💵' },
+    { key: 'carte'      as keyof PaiementSettings, label: 'Carte bancaire',     icon: '💳' },
+    { key: 'wave'       as keyof PaiementSettings, label: 'Wave',               icon: '🌊' },
+    { key: 'orangeMoney'as keyof PaiementSettings, label: 'Orange Money',       icon: '🟠' },
+    { key: 'virement'   as keyof PaiementSettings, label: 'Virement bancaire',  icon: '🏦' },
+  ]
+
+  return (
+    <div className="space-y-5">
+      <SectionHeader icon={CreditCard} title="Paiements & Facturation" subtitle="Modes de paiement, devise et paramètres fiscaux" />
+
+      <Card>
+        <div className="border-b border-stone-100 dark:border-slate-700 px-5 py-3.5">
+          <p className="text-sm font-semibold text-slate-900 dark:text-white">Paramètres généraux</p>
+        </div>
+        <div className="px-5 py-1 divide-y divide-stone-100 dark:divide-slate-700">
+          <FieldRow label="Devise" hint="Monnaie utilisée dans toute l'application">
+            <select
+              value={settings.devise}
+              onChange={(e) => setSettings((p) => ({ ...p, devise: e.target.value }))}
+              className="w-40 rounded-lg border border-stone-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-1.5 text-sm text-slate-900 dark:text-white focus:border-primary-400 focus:outline-none"
+            >
+              <option value="XOF">XOF — Franc CFA</option>
+              <option value="EUR">EUR — Euro</option>
+              <option value="USD">USD — Dollar</option>
+            </select>
+          </FieldRow>
+          <FieldRow label="TVA (%)" hint="0 = pas de TVA appliquée">
+            <div className="flex items-center gap-2">
+              <Input value={String(settings.tva)} onChange={(v) => setSettings((p) => ({ ...p, tva: parseFloat(v) || 0 }))} type="number" className="w-20 text-center" />
+              <span className="text-sm text-stone-400">%</span>
+            </div>
+          </FieldRow>
+          <FieldRow label="Reçu automatique" hint="Générer un reçu PDF après chaque transaction">
+            <Toggle enabled={settings.recu} onChange={() => tog('recu')} />
+          </FieldRow>
+        </div>
+      </Card>
+
+      <Card>
+        <div className="border-b border-stone-100 dark:border-slate-700 px-5 py-3.5">
+          <p className="text-sm font-semibold text-slate-900 dark:text-white">Modes de paiement acceptés</p>
+        </div>
+        <div className="px-5 py-1 divide-y divide-stone-100 dark:divide-slate-700">
+          {methods.map(({ key, label, icon }) => (
+            <FieldRow key={key} label={`${icon}  ${label}`}>
+              <Toggle enabled={settings[key] as boolean} onChange={() => tog(key)} />
+            </FieldRow>
+          ))}
+        </div>
+        <div className="flex items-center justify-between border-t border-stone-100 dark:border-slate-700 px-5 py-3">
+          <LocalBadge />
+          <SaveButton onClick={onSave} label="Enregistrer" />
+        </div>
+      </Card>
+    </div>
+  )
+}
+
+// ── Section: Utilisateurs ──────────────────────────────────────────────────────
+
+const ROLE_BADGE: Record<string, string> = {
+  Administrateur: 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300',
+  Thérapeute:     'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300',
+  Caissière:      'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300',
+  Réceptionniste: 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300',
+  admin:          'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300',
+  caissier:       'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300',
+  medecin:        'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300',
+}
+
+function UtilisateursSection({ users, isAdmin }: { users: AppUser[]; isAdmin: boolean }) {
+  return (
+    <div className="space-y-5">
+      <SectionHeader icon={Users} title="Utilisateurs & Rôles" subtitle="Gérez les accès et les permissions" />
+
+      <div className="flex justify-end">
+        {isAdmin && (
+          <button className="flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 transition cursor-pointer">
+            <Plus className="h-4 w-4" /> Inviter un utilisateur
+          </button>
+        )}
+      </div>
+
+      <Card>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-stone-100 dark:border-slate-700 bg-stone-50 dark:bg-slate-900 text-left">
+                <th className="px-5 py-3 text-xs font-semibold text-stone-400 dark:text-slate-500 uppercase tracking-wide">Utilisateur</th>
+                <th className="px-5 py-3 text-xs font-semibold text-stone-400 dark:text-slate-500 uppercase tracking-wide">Rôle</th>
+                <th className="hidden md:table-cell px-5 py-3 text-xs font-semibold text-stone-400 dark:text-slate-500 uppercase tracking-wide">Dernière connexion</th>
+                <th className="px-5 py-3 text-xs font-semibold text-stone-400 dark:text-slate-500 uppercase tracking-wide">Statut</th>
+                {isAdmin && <th className="px-5 py-3" />}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-stone-100 dark:divide-slate-700">
+              {users.map((u) => (
+                <tr key={u.id} className="hover:bg-stone-50 dark:hover:bg-slate-700/50 transition-colors">
+                  <td className="px-5 py-3.5">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/30 text-xs font-bold text-primary-700 dark:text-primary-300">
+                        {u.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="font-medium text-slate-900 dark:text-white">{u.name}</p>
+                        <p className="text-xs text-stone-400 dark:text-slate-500">{u.email}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-5 py-3.5">
+                    <span className={cn('rounded-full px-2.5 py-0.5 text-xs font-medium', ROLE_BADGE[u.role] ?? 'bg-stone-100 text-stone-600')}>
+                      {u.role}
+                    </span>
+                  </td>
+                  <td className="hidden md:table-cell px-5 py-3.5 text-stone-500 dark:text-slate-400">{u.lastLogin}</td>
+                  <td className="px-5 py-3.5">
+                    <span className={cn(
+                      'rounded-full px-2.5 py-0.5 text-xs font-medium',
+                      u.status === 'actif'
+                        ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400'
+                        : 'bg-stone-100 dark:bg-slate-700 text-stone-500 dark:text-slate-400',
+                    )}>
+                      {u.status === 'actif' ? 'Actif' : 'Inactif'}
+                    </span>
+                  </td>
+                  {isAdmin && (
+                    <td className="px-5 py-3.5">
+                      <button className="rounded-lg border border-stone-200 dark:border-slate-600 p-1.5 text-stone-400 hover:bg-stone-50 dark:hover:bg-slate-700 cursor-pointer transition">
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+
+      <Card>
+        <div className="px-5 py-4">
+          <p className="text-sm font-semibold text-slate-900 dark:text-white mb-3">Rôles disponibles</p>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {[
+              { role: 'Administrateur', desc: 'Accès complet' },
+              { role: 'Caissière',      desc: 'Caisse & RDV' },
+              { role: 'Thérapeute',     desc: 'RDV & Planning' },
+            ].map(({ role, desc }) => (
+              <div key={role} className="flex items-start gap-2 rounded-lg border border-stone-200 dark:border-slate-600 p-3">
+                <span className={cn('mt-0.5 rounded-full px-2 py-0.5 text-xs font-medium', ROLE_BADGE[role] ?? 'bg-stone-100 text-stone-600')}>
+                  {role[0]}
+                </span>
+                <div>
+                  <p className="text-xs font-semibold text-slate-900 dark:text-white">{role}</p>
+                  <p className="text-xs text-stone-400 dark:text-slate-500">{desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </Card>
+    </div>
+  )
+}
+
+// ── Section: Sécurité ──────────────────────────────────────────────────────────
+
+function SecuriteSection() {
+  const [showPwd, setShowPwd] = useState(false)
+  const [pwd, setPwd] = useState({ current: '', next: '', confirm: '' })
+
+  return (
+    <div className="space-y-5">
+      <SectionHeader icon={Shield} title="Sécurité" subtitle="Gérez vos identifiants et la protection du compte" />
+
+      <Card>
+        <div className="border-b border-stone-100 dark:border-slate-700 px-5 py-3.5">
+          <p className="text-sm font-semibold text-slate-900 dark:text-white">Changer le mot de passe</p>
+        </div>
+        <div className="px-5 py-1 divide-y divide-stone-100 dark:divide-slate-700">
+          <FieldRow label="Mot de passe actuel">
+            <div className="relative">
+              <Input
+                value={pwd.current}
+                onChange={(v) => setPwd((p) => ({ ...p, current: v }))}
+                type={showPwd ? 'text' : 'password'}
+                placeholder="••••••••"
+              />
+              <button
+                onClick={() => setShowPwd(!showPwd)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 cursor-pointer"
+              >
+                {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+          </FieldRow>
+          <FieldRow label="Nouveau mot de passe">
+            <Input
+              value={pwd.next}
+              onChange={(v) => setPwd((p) => ({ ...p, next: v }))}
+              type="password"
+              placeholder="••••••••"
+            />
+          </FieldRow>
+          <FieldRow label="Confirmer">
+            <div className="flex items-center gap-2">
+              <Input
+                value={pwd.confirm}
+                onChange={(v) => setPwd((p) => ({ ...p, confirm: v }))}
+                type="password"
+                placeholder="••••••••"
+              />
+              {pwd.next && pwd.confirm && (
+                pwd.next === pwd.confirm
+                  ? <Check className="h-4 w-4 text-emerald-500" />
+                  : <AlertCircle className="h-4 w-4 text-rose-500" />
+              )}
+            </div>
+          </FieldRow>
+        </div>
+        <div className="flex justify-end border-t border-stone-100 dark:border-slate-700 px-5 py-3">
           <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
+            disabled={!pwd.current || pwd.next !== pwd.confirm || pwd.next.length < 8}
+            className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-40 transition cursor-pointer"
+          >
+            Mettre à jour
+          </button>
+        </div>
+      </Card>
+
+      <Card>
+        <div className="border-b border-stone-100 dark:border-slate-700 px-5 py-3.5">
+          <p className="text-sm font-semibold text-slate-900 dark:text-white">Authentification</p>
+        </div>
+        <div className="px-5 py-1 divide-y divide-stone-100 dark:divide-slate-700">
+          <FieldRow label="Double authentification (2FA)" hint="Renforce la sécurité de votre compte">
+            <span className="rounded-full bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 px-2.5 py-0.5 text-xs font-medium border border-amber-200 dark:border-amber-800">
+              Non configuré
+            </span>
+          </FieldRow>
+          <FieldRow label="Session active" hint="Appareil courant">
+            <div className="flex items-center gap-2 text-xs text-stone-500 dark:text-slate-400">
+              <Wifi className="h-3.5 w-3.5 text-emerald-500" />
+              Connecté maintenant
+            </div>
+          </FieldRow>
+        </div>
+      </Card>
+    </div>
+  )
+}
+
+// ── Section: Journal d'activité ────────────────────────────────────────────────
+
+const ACTION_LABELS: Record<string, { label: string; color: string }> = {
+  created: { label: 'Créé',    color: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400' },
+  updated: { label: 'Modifié', color: 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400'           },
+  deleted: { label: 'Supprimé',color: 'bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-400'           },
+}
+
+function JournalSection({ logs }: { logs: AuditLogEntry[] }) {
+  const [filter, setFilter] = useState<string>('all')
+  const [search, setSearch] = useState('')
+
+  const filtered = logs.filter((l) => {
+    if (filter !== 'all' && l.action !== filter) return false
+    if (search && !`${l.entity_type} ${l.entity_name} ${l.actor_email}`.toLowerCase().includes(search.toLowerCase())) return false
+    return true
+  })
+
+  return (
+    <div className="space-y-5">
+      <SectionHeader icon={Activity} title="Journal d'activité" subtitle="Historique de toutes les actions effectuées dans le CRM" />
+
+      {/* Filters */}
+      <div className="flex flex-wrap gap-2">
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Rechercher…"
+          className="rounded-lg border border-stone-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-1.5 text-sm text-slate-900 dark:text-white focus:border-primary-400 focus:outline-none flex-1 min-w-40"
+        />
+        {['all', 'created', 'updated', 'deleted'].map((f) => (
+          <button
+            key={f}
+            onClick={() => setFilter(f)}
             className={cn(
-              'rounded-md px-4 py-1.5 text-sm font-medium transition-colors cursor-pointer',
-              tab === t.key ? 'bg-white text-slate-900 shadow-xs' : 'text-stone-500 hover:text-slate-900'
+              'rounded-lg px-3 py-1.5 text-xs font-medium cursor-pointer transition',
+              filter === f
+                ? 'bg-primary-600 text-white'
+                : 'border border-stone-200 dark:border-slate-600 text-stone-600 dark:text-slate-300 hover:bg-stone-50 dark:hover:bg-slate-700',
             )}
           >
-            {t.label}
+            {f === 'all' ? 'Tout' : ACTION_LABELS[f]?.label ?? f}
           </button>
         ))}
       </div>
 
-      {/* Onglet Général */}
-      {tab === 'general' && (
-        <div className="mx-auto max-w-2xl space-y-6">
-          {sections.map((section) => {
-            const Icon = section.icon
-            return (
-              <div key={section.title} className="rounded-lg border border-stone-200 bg-white shadow-xs">
-                <div className="flex items-center gap-3 border-b border-stone-200 px-5 py-4">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary-50">
-                    <Icon className="h-4 w-4 text-primary-600" />
+      <Card>
+        {filtered.length === 0 ? (
+          <div className="px-5 py-12 text-center">
+            <Activity className="mx-auto mb-2 h-8 w-8 text-stone-300 dark:text-slate-600" />
+            <p className="text-sm text-stone-400 dark:text-slate-500">Aucune activité enregistrée</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-stone-100 dark:divide-slate-700">
+            {filtered.slice(0, 30).map((log) => {
+              const actionInfo = ACTION_LABELS[log.action] ?? { label: log.action, color: 'bg-stone-100 text-stone-600' }
+              const date = new Date(log.created_at)
+              return (
+                <div key={log.id} className="flex items-start gap-3 px-5 py-3.5">
+                  <span className={cn('mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-xs font-medium', actionInfo.color)}>
+                    {actionInfo.label}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-slate-900 dark:text-white">
+                      <span className="font-medium">{log.entity_type}</span>
+                      {log.entity_name && <span className="text-stone-500 dark:text-slate-400"> — {log.entity_name}</span>}
+                    </p>
+                    <p className="text-xs text-stone-400 dark:text-slate-500">
+                      {log.actor_email ?? 'Système'} · {log.actor_role}
+                    </p>
                   </div>
-                  <h2 className="font-semibold text-slate-900">{section.title}</h2>
+                  <time className="shrink-0 text-xs text-stone-400 dark:text-slate-500">
+                    {date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
+                    {' '}
+                    {date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                  </time>
                 </div>
-                <div className="divide-y divide-stone-100 px-5">
-                  {'fields' in section && section.fields?.map((f) => (
-                    <div key={f.label} className="flex items-center justify-between py-3.5">
-                      <label className="text-sm font-medium text-slate-700">{f.label}</label>
-                      <input
-                        type={f.type}
-                        defaultValue={f.value}
-                        className="w-52 rounded-md border border-stone-200 px-3 py-1.5 text-sm text-slate-900 focus:border-primary-400 focus:outline-none"
-                      />
-                    </div>
-                  ))}
-                  {'toggles' in section && section.toggles?.map((t) => (
-                    <div key={t.label} className="flex items-center justify-between py-3.5">
-                      <span className="text-sm font-medium text-slate-700">{t.label}</span>
-                      <div className={cn('relative inline-flex h-5 w-9 cursor-pointer rounded-full transition-colors', t.enabled ? 'bg-primary-600' : 'bg-stone-200')}>
-                        <span className={cn('absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform', t.enabled ? 'translate-x-4' : 'translate-x-0.5')} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )
-          })}
-          <button className="w-full rounded-md bg-primary-600 py-2.5 text-sm font-semibold text-white hover:bg-primary-700 cursor-pointer">
-            Enregistrer les modifications
-          </button>
-        </div>
-      )}
-
-      {/* Onglet Établissements */}
-      {tab === 'etablissements' && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-stone-500">{establishments.length} établissements dans le groupe</p>
-            <button className="flex items-center gap-2 rounded-md bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700 cursor-pointer">
-              <Plus className="h-4 w-4" />
-              Ajouter un site
-            </button>
+              )
+            })}
+            {filtered.length > 30 && (
+              <p className="px-5 py-3 text-center text-xs text-stone-400 dark:text-slate-500">
+                {filtered.length - 30} entrées supplémentaires non affichées
+              </p>
+            )}
           </div>
-          {establishments.map((e) => (
-            <div key={e.id} className="flex items-center gap-4 rounded-lg border border-stone-200 bg-white p-5 shadow-xs">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-50">
-                <MapPin className="h-5 w-5 text-primary-600" />
-              </div>
+        )}
+      </Card>
+    </div>
+  )
+}
+
+// ── Root ───────────────────────────────────────────────────────────────────────
+
+interface Props {
+  establishment: Establishment | null
+  establishments: Establishment[]
+  logs: AuditLogEntry[]
+  users: AppUser[]
+  isAdmin: boolean
+}
+
+export function SettingsView({ establishment, logs, users, isAdmin }: Props) {
+  const [section, setSection] = useState<Section>('etablissement')
+  const { toasts, push } = useToasts()
+  const [isPending, startTransition] = useTransition()
+
+  // ── Preferences (localStorage) ──
+  const [horaires, setHoraires] = useLocalPref<Horaires>('horaires', {
+    lundi:    { open: true,  start: '08:00', end: '20:00' },
+    mardi:    { open: true,  start: '08:00', end: '20:00' },
+    mercredi: { open: true,  start: '08:00', end: '20:00' },
+    jeudi:    { open: true,  start: '08:00', end: '20:00' },
+    vendredi: { open: true,  start: '08:00', end: '20:00' },
+    samedi:   { open: true,  start: '09:00', end: '18:00' },
+    dimanche: { open: false, start: '10:00', end: '16:00' },
+  })
+
+  const [notifs, setNotifs] = useLocalPref<Notifs>('notifs', {
+    rdvSms: true, rdvEmail: true, rdvWhatsapp: false,
+    stockBas: true, rapports: false, nouveaux: true, annulation: true,
+  })
+
+  const [rdvSettings, setRdvSettings] = useLocalPref<RdvSettings>('rdv', {
+    dureeMin: 30, buffer: 10, confirmAuto: false, annulationH: 24, rappelH: 2, nbMaxJour: 0,
+  })
+
+  const [paiements, setPaiements] = useLocalPref<PaiementSettings>('paiements', {
+    devise: 'XOF', tva: 0, especes: true, carte: true,
+    wave: true, orangeMoney: true, virement: false, recu: true,
+  })
+
+  // ── Save handlers ──
+  function saveEstablishment(form: EstabForm) {
+    if (!establishment?.id) { push('error', 'Aucun établissement sélectionné'); return }
+    startTransition(async () => {
+      const res = await updateEstablishment(establishment.id, {
+        name:    form.name    || undefined,
+        city:    form.city    || undefined,
+        address: form.address || null,
+        phone:   form.phone   || null,
+      })
+      if (res.error) push('error', res.error)
+      else push('success', 'Établissement mis à jour')
+    })
+  }
+
+  return (
+    <div className="flex flex-1 overflow-hidden">
+      {/* Toast container */}
+      <div className="pointer-events-none fixed right-4 top-20 z-50 flex flex-col gap-2">
+        {toasts.map((t) => (
+          <div
+            key={t.id}
+            className={cn(
+              'pointer-events-auto flex items-center gap-2 rounded-lg px-4 py-3 text-sm font-medium shadow-lg animate-in slide-in-from-right-4 duration-200',
+              t.type === 'success' ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white',
+            )}
+          >
+            {t.type === 'success' ? <Check className="h-4 w-4 shrink-0" /> : <AlertCircle className="h-4 w-4 shrink-0" />}
+            {t.msg}
+          </div>
+        ))}
+      </div>
+
+      {/* ── Sidebar ── */}
+      <aside className="hidden lg:flex w-64 shrink-0 flex-col border-r border-stone-200 dark:border-slate-700 bg-stone-50 dark:bg-slate-900 overflow-y-auto">
+        <div className="p-4">
+          <p className="mb-3 px-2 text-[10px] font-bold uppercase tracking-widest text-stone-400 dark:text-slate-600">
+            Configuration
+          </p>
+          {NAV.map(({ key, icon: Icon, label, desc }) => (
+            <button
+              key={key}
+              onClick={() => setSection(key)}
+              className={cn(
+                'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-all mb-0.5 cursor-pointer',
+                section === key
+                  ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300'
+                  : 'text-slate-700 dark:text-slate-300 hover:bg-stone-100 dark:hover:bg-slate-800',
+              )}
+            >
+              <Icon className={cn('h-4 w-4 shrink-0', section === key ? 'text-primary-600' : 'text-stone-400 dark:text-slate-500')} />
               <div className="flex-1 min-w-0">
-                <p className="font-semibold text-slate-900">{e.name}</p>
-                <p className="text-sm text-stone-500">{e.address} · {e.staff} employés</p>
+                <p className="text-sm font-medium leading-none">{label}</p>
+                <p className="mt-0.5 truncate text-[11px] text-stone-400 dark:text-slate-500">{desc}</p>
               </div>
-              <span className={cn(
-                'rounded-full px-2.5 py-0.5 text-xs font-medium',
-                e.status === 'actif' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'
-              )}>
-                {e.status === 'actif' ? 'Actif' : 'Ouverture prochaine'}
-              </span>
-              <button className="rounded-md border border-stone-200 p-2 text-stone-500 hover:bg-stone-50 cursor-pointer">
-                <Pencil className="h-3.5 w-3.5" />
-              </button>
-            </div>
+              {section === key && <ChevronRight className="h-3.5 w-3.5 shrink-0 text-primary-400" />}
+            </button>
           ))}
-          <div className="rounded-lg border-2 border-dashed border-stone-200 p-8 text-center">
-            <Building2 className="mx-auto mb-2 h-8 w-8 text-stone-300" />
-            <p className="text-sm font-medium text-stone-500">Ouvrir un nouveau site</p>
-            <p className="mt-1 text-xs text-stone-400">Gérez tous vos spas depuis un seul tableau de bord</p>
-            <button className="mt-3 rounded-md border border-stone-200 px-4 py-2 text-xs font-medium text-stone-600 hover:bg-stone-50 cursor-pointer">
-              Commencer la configuration
-            </button>
-          </div>
         </div>
-      )}
+      </aside>
 
-      {/* Onglet Utilisateurs */}
-      {tab === 'utilisateurs' && (
-        <div>
-          <div className="mb-4 flex items-center justify-between">
-            <p className="text-sm text-stone-500">{appUsers.length} comptes utilisateurs</p>
-            <button className="flex items-center gap-2 rounded-md bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700 cursor-pointer">
-              <Plus className="h-4 w-4" />
-              Inviter un utilisateur
+      {/* ── Mobile nav ── */}
+      <div className="fixed left-0 right-0 top-16 z-30 border-b border-stone-200 dark:border-slate-700 bg-white dark:bg-slate-800 lg:hidden">
+        <div className="flex gap-1 overflow-x-auto px-3 py-2 [scrollbar-width:none]">
+          {NAV.map(({ key, icon: Icon, label }) => (
+            <button
+              key={key}
+              onClick={() => setSection(key)}
+              className={cn(
+                'flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition cursor-pointer',
+                section === key
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-stone-100 dark:bg-slate-700 text-stone-600 dark:text-slate-300 hover:bg-stone-200 dark:hover:bg-slate-600',
+              )}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              {label}
             </button>
-          </div>
-          <div className="rounded-lg border border-stone-200 bg-white shadow-xs">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-stone-100 bg-stone-50 text-left text-xs font-medium text-stone-400">
-                    <th className="px-5 py-3">Utilisateur</th>
-                    <th className="px-5 py-3">Rôle</th>
-                    <th className="hidden px-5 py-3 md:table-cell">Dernière connexion</th>
-                    <th className="px-5 py-3">Statut</th>
-                    <th className="px-5 py-3"></th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-stone-100">
-                  {appUsers.map((u) => (
-                    <tr key={u.id} className="hover:bg-stone-50">
-                      <td className="px-5 py-3.5">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-100 text-xs font-bold text-primary-700">
-                            {u.name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
-                          </div>
-                          <div>
-                            <p className="font-medium text-slate-900">{u.name}</p>
-                            <p className="text-xs text-stone-400">{u.email}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <span className="rounded-full bg-stone-100 px-2.5 py-0.5 text-xs font-medium text-stone-600">
-                          {u.role}
-                        </span>
-                      </td>
-                      <td className="hidden px-5 py-3.5 text-stone-500 md:table-cell">{u.lastLogin}</td>
-                      <td className="px-5 py-3.5">
-                        <span className={cn(
-                          'rounded-full px-2.5 py-0.5 text-xs font-medium',
-                          u.status === 'actif' ? 'bg-emerald-50 text-emerald-700' : 'bg-stone-100 text-stone-500'
-                        )}>
-                          {u.status === 'actif' ? 'Actif' : 'Inactif'}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <button className="rounded-md border border-stone-200 p-1.5 text-stone-400 hover:bg-stone-50 cursor-pointer">
-                          <Pencil className="h-3 w-3" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-          <div className="mt-6 rounded-lg border border-stone-200 bg-white p-5 shadow-xs">
-            <div className="flex items-center gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary-50">
-                <Users className="h-4 w-4 text-primary-600" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-slate-900">Rôles et permissions</p>
-                <p className="text-xs text-stone-500">Administrateur · Gérant · Thérapeute · Caissière · Réceptionniste</p>
-              </div>
-              <button className="ml-auto rounded-md border border-stone-200 px-3 py-1.5 text-xs font-medium text-stone-600 hover:bg-stone-50 cursor-pointer">
-                Gérer les rôles
-              </button>
-            </div>
-          </div>
+          ))}
         </div>
-      )}
+      </div>
+
+      {/* ── Content ── */}
+      <main className="flex-1 overflow-y-auto p-4 pt-14 lg:p-6 lg:pt-6">
+        <div className="mx-auto max-w-2xl">
+          {section === 'etablissement' && (
+            <EtablissementSection
+              establishment={establishment}
+              onSave={saveEstablishment}
+              pending={isPending}
+            />
+          )}
+          {section === 'horaires' && (
+            <HorairesSection
+              horaires={horaires}
+              setHoraires={setHoraires}
+              onSave={() => push('success', 'Horaires enregistrés')}
+            />
+          )}
+          {section === 'notifications' && (
+            <NotificationsSection
+              notifs={notifs}
+              setNotifs={setNotifs}
+              onSave={() => push('success', 'Notifications enregistrées')}
+            />
+          )}
+          {section === 'rendez-vous' && (
+            <RendezVousSection
+              settings={rdvSettings}
+              setSettings={setRdvSettings}
+              onSave={() => push('success', 'Paramètres RDV enregistrés')}
+            />
+          )}
+          {section === 'paiements' && (
+            <PaiementsSection
+              settings={paiements}
+              setSettings={setPaiements}
+              onSave={() => push('success', 'Paiements enregistrés')}
+            />
+          )}
+          {section === 'utilisateurs' && (
+            <UtilisateursSection users={users} isAdmin={isAdmin} />
+          )}
+          {section === 'securite' && <SecuriteSection />}
+          {section === 'journal' && <JournalSection logs={logs} />}
+        </div>
+      </main>
     </div>
   )
 }
