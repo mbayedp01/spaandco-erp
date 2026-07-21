@@ -9,9 +9,10 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { updateEstablishment } from '@/app/actions/establishments'
+import { updateUserRoleAction, toggleUserStatusAction, createUserAction } from '@/app/actions/users'
 import type { Database } from '@/lib/supabase/types'
 import type { AuditLogEntry } from '@/lib/audit-types'
-import type { AppUser } from '@/lib/mock-data'
+import type { UserProfile } from '@/lib/db/users'
 
 type Establishment = Database['public']['Tables']['establishments']['Row']
 
@@ -557,82 +558,220 @@ function PaiementsSection({ settings, setSettings, onSave }: {
 // ── Section: Utilisateurs ──────────────────────────────────────────────────────
 
 const ROLE_BADGE: Record<string, string> = {
-  Administrateur: 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300',
-  Thérapeute:     'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300',
-  Caissière:      'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300',
-  Réceptionniste: 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300',
-  admin:          'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300',
-  caissier:       'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300',
-  medecin:        'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300',
+  admin:    'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300',
+  caissier: 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300',
+  medecin:  'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300',
 }
 
-function UtilisateursSection({ users, isAdmin }: { users: AppUser[]; isAdmin: boolean }) {
+const ROLE_OPTIONS = [
+  { value: 'admin',    label: 'Administrateur' },
+  { value: 'caissier', label: 'Caissier'       },
+  { value: 'medecin',  label: 'Thérapeute'     },
+]
+
+function UtilisateursSection({ users, isAdmin }: { users: UserProfile[]; isAdmin: boolean }) {
+  const [showInvite, setShowInvite] = useState(false)
+  const [editUser, setEditUser] = useState<UserProfile | null>(null)
+  const [pending, startTransition] = useTransition()
+  const { push } = useToasts()
+
+  // Invite form state
+  const [inviteForm, setInviteForm] = useState({ email: '', name: '', role: 'medecin', password: '' })
+
+  function handleInvite() {
+    if (!inviteForm.email || !inviteForm.name || !inviteForm.password) {
+      push('error', 'Tous les champs sont requis')
+      return
+    }
+    startTransition(async () => {
+      const res = await createUserAction(inviteForm.email, inviteForm.name, inviteForm.role, inviteForm.password)
+      if (res.error) push('error', res.error)
+      else { push('success', 'Utilisateur créé'); setShowInvite(false); setInviteForm({ email: '', name: '', role: 'medecin', password: '' }) }
+    })
+  }
+
+  function handleRoleUpdate(userId: string, newRole: string) {
+    startTransition(async () => {
+      const res = await updateUserRoleAction(userId, newRole)
+      if (res.error) push('error', res.error)
+      else { push('success', 'Rôle mis à jour'); setEditUser(null) }
+    })
+  }
+
+  function handleToggleStatus(user: UserProfile) {
+    startTransition(async () => {
+      const res = await toggleUserStatusAction(user.id, user.status)
+      if (res.error) push('error', res.error)
+      else push('success', user.status === 'actif' ? 'Compte désactivé' : 'Compte réactivé')
+    })
+  }
+
   return (
     <div className="space-y-5">
       <SectionHeader icon={Users} title="Utilisateurs & Rôles" subtitle="Gérez les accès et les permissions" />
 
+      {/* Invite modal */}
+      {showInvite && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white dark:bg-slate-800 shadow-xl p-6">
+            <h3 className="mb-4 text-base font-semibold text-slate-900 dark:text-white">Créer un utilisateur</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Nom complet</label>
+                <input value={inviteForm.name} onChange={e => setInviteForm(p => ({ ...p, name: e.target.value }))}
+                  className="w-full rounded-lg border border-stone-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm text-slate-900 dark:text-white focus:border-primary-400 focus:outline-none"
+                  placeholder="Prénom Nom" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Email</label>
+                <input type="email" value={inviteForm.email} onChange={e => setInviteForm(p => ({ ...p, email: e.target.value }))}
+                  className="w-full rounded-lg border border-stone-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm text-slate-900 dark:text-white focus:border-primary-400 focus:outline-none"
+                  placeholder="email@spaandco.sn" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Rôle</label>
+                <select value={inviteForm.role} onChange={e => setInviteForm(p => ({ ...p, role: e.target.value }))}
+                  className="w-full rounded-lg border border-stone-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm text-slate-900 dark:text-white focus:border-primary-400 focus:outline-none">
+                  {ROLE_OPTIONS.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Mot de passe temporaire</label>
+                <input type="password" value={inviteForm.password} onChange={e => setInviteForm(p => ({ ...p, password: e.target.value }))}
+                  className="w-full rounded-lg border border-stone-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm text-slate-900 dark:text-white focus:border-primary-400 focus:outline-none"
+                  placeholder="Min. 6 caractères" />
+              </div>
+            </div>
+            <div className="mt-5 flex justify-end gap-2">
+              <button onClick={() => setShowInvite(false)} className="rounded-lg border border-stone-200 dark:border-slate-600 px-4 py-2 text-sm text-stone-600 dark:text-slate-300 hover:bg-stone-50 dark:hover:bg-slate-700 cursor-pointer transition">
+                Annuler
+              </button>
+              <button onClick={handleInvite} disabled={pending}
+                className="flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-60 cursor-pointer transition">
+                {pending ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" /> : <Plus className="h-4 w-4" />}
+                Créer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit role modal */}
+      {editUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-sm rounded-2xl bg-white dark:bg-slate-800 shadow-xl p-6">
+            <h3 className="mb-1 text-base font-semibold text-slate-900 dark:text-white">Modifier le rôle</h3>
+            <p className="mb-4 text-xs text-stone-400 dark:text-slate-500">{editUser.name ?? editUser.email}</p>
+            <select defaultValue={editUser.role} id="edit-role-select"
+              className="w-full rounded-lg border border-stone-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm text-slate-900 dark:text-white focus:border-primary-400 focus:outline-none mb-4">
+              {ROLE_OPTIONS.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+            </select>
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setEditUser(null)} className="rounded-lg border border-stone-200 dark:border-slate-600 px-4 py-2 text-sm text-stone-600 dark:text-slate-300 hover:bg-stone-50 dark:hover:bg-slate-700 cursor-pointer transition">
+                Annuler
+              </button>
+              <button
+                onClick={() => {
+                  const sel = document.getElementById('edit-role-select') as HTMLSelectElement
+                  handleRoleUpdate(editUser.id, sel.value)
+                }}
+                disabled={pending}
+                className="flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-60 cursor-pointer transition">
+                {pending ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" /> : <Check className="h-4 w-4" />}
+                Enregistrer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex justify-end">
         {isAdmin && (
-          <button className="flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 transition cursor-pointer">
-            <Plus className="h-4 w-4" /> Inviter un utilisateur
+          <button onClick={() => setShowInvite(true)}
+            className="flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 transition cursor-pointer">
+            <Plus className="h-4 w-4" /> Créer un utilisateur
           </button>
         )}
       </div>
 
       <Card>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-stone-100 dark:border-slate-700 bg-stone-50 dark:bg-slate-900 text-left">
-                <th className="px-5 py-3 text-xs font-semibold text-stone-400 dark:text-slate-500 uppercase tracking-wide">Utilisateur</th>
-                <th className="px-5 py-3 text-xs font-semibold text-stone-400 dark:text-slate-500 uppercase tracking-wide">Rôle</th>
-                <th className="hidden md:table-cell px-5 py-3 text-xs font-semibold text-stone-400 dark:text-slate-500 uppercase tracking-wide">Dernière connexion</th>
-                <th className="px-5 py-3 text-xs font-semibold text-stone-400 dark:text-slate-500 uppercase tracking-wide">Statut</th>
-                {isAdmin && <th className="px-5 py-3" />}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-stone-100 dark:divide-slate-700">
-              {users.map((u) => (
-                <tr key={u.id} className="hover:bg-stone-50 dark:hover:bg-slate-700/50 transition-colors">
-                  <td className="px-5 py-3.5">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/30 text-xs font-bold text-primary-700 dark:text-primary-300">
-                        {u.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
-                      </div>
-                      <div>
-                        <p className="font-medium text-slate-900 dark:text-white">{u.name}</p>
-                        <p className="text-xs text-stone-400 dark:text-slate-500">{u.email}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-5 py-3.5">
-                    <span className={cn('rounded-full px-2.5 py-0.5 text-xs font-medium', ROLE_BADGE[u.role] ?? 'bg-stone-100 text-stone-600')}>
-                      {u.role}
-                    </span>
-                  </td>
-                  <td className="hidden md:table-cell px-5 py-3.5 text-stone-500 dark:text-slate-400">{u.lastLogin}</td>
-                  <td className="px-5 py-3.5">
-                    <span className={cn(
-                      'rounded-full px-2.5 py-0.5 text-xs font-medium',
-                      u.status === 'actif'
-                        ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400'
-                        : 'bg-stone-100 dark:bg-slate-700 text-stone-500 dark:text-slate-400',
-                    )}>
-                      {u.status === 'actif' ? 'Actif' : 'Inactif'}
-                    </span>
-                  </td>
-                  {isAdmin && (
-                    <td className="px-5 py-3.5">
-                      <button className="rounded-lg border border-stone-200 dark:border-slate-600 p-1.5 text-stone-400 hover:bg-stone-50 dark:hover:bg-slate-700 cursor-pointer transition">
-                        <Pencil className="h-3.5 w-3.5" />
-                      </button>
-                    </td>
-                  )}
+        {users.length === 0 ? (
+          <div className="px-5 py-10 text-center text-sm text-stone-400 dark:text-slate-500">
+            Aucun utilisateur — exécutez la migration SQL <code className="font-mono text-xs">user_profiles</code>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-stone-100 dark:border-slate-700 bg-stone-50 dark:bg-slate-900 text-left">
+                  <th className="px-5 py-3 text-xs font-semibold text-stone-400 dark:text-slate-500 uppercase tracking-wide">Utilisateur</th>
+                  <th className="px-5 py-3 text-xs font-semibold text-stone-400 dark:text-slate-500 uppercase tracking-wide">Rôle</th>
+                  <th className="px-5 py-3 text-xs font-semibold text-stone-400 dark:text-slate-500 uppercase tracking-wide">Statut</th>
+                  {isAdmin && <th className="px-5 py-3" />}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-stone-100 dark:divide-slate-700">
+                {users.map((u) => {
+                  const initials = (u.name ?? u.email).split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
+                  const roleLabel = ROLE_OPTIONS.find(r => r.value === u.role)?.label ?? u.role
+                  return (
+                    <tr key={u.id} className="hover:bg-stone-50 dark:hover:bg-slate-700/50 transition-colors">
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/30 text-xs font-bold text-primary-700 dark:text-primary-300">
+                            {initials}
+                          </div>
+                          <div>
+                            <p className="font-medium text-slate-900 dark:text-white">{u.name ?? '—'}</p>
+                            <p className="text-xs text-stone-400 dark:text-slate-500">{u.email}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <span className={cn('rounded-full px-2.5 py-0.5 text-xs font-medium', ROLE_BADGE[u.role] ?? 'bg-stone-100 text-stone-600')}>
+                          {roleLabel}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        {isAdmin ? (
+                          <button
+                            onClick={() => handleToggleStatus(u)}
+                            disabled={pending}
+                            className={cn(
+                              'rounded-full px-2.5 py-0.5 text-xs font-medium cursor-pointer transition hover:opacity-80',
+                              u.status === 'actif'
+                                ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400'
+                                : 'bg-stone-100 dark:bg-slate-700 text-stone-500 dark:text-slate-400',
+                            )}
+                          >
+                            {u.status === 'actif' ? 'Actif' : 'Inactif'}
+                          </button>
+                        ) : (
+                          <span className={cn(
+                            'rounded-full px-2.5 py-0.5 text-xs font-medium',
+                            u.status === 'actif' ? 'bg-emerald-50 text-emerald-700' : 'bg-stone-100 text-stone-500',
+                          )}>
+                            {u.status === 'actif' ? 'Actif' : 'Inactif'}
+                          </span>
+                        )}
+                      </td>
+                      {isAdmin && (
+                        <td className="px-5 py-3.5">
+                          <button
+                            onClick={() => setEditUser(u)}
+                            className="rounded-lg border border-stone-200 dark:border-slate-600 p-1.5 text-stone-400 hover:bg-stone-50 dark:hover:bg-slate-700 cursor-pointer transition"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                        </td>
+                      )}
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </Card>
 
       <Card>
@@ -640,16 +779,16 @@ function UtilisateursSection({ users, isAdmin }: { users: AppUser[]; isAdmin: bo
           <p className="text-sm font-semibold text-slate-900 dark:text-white mb-3">Rôles disponibles</p>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             {[
-              { role: 'Administrateur', desc: 'Accès complet' },
-              { role: 'Caissière',      desc: 'Caisse & RDV' },
-              { role: 'Thérapeute',     desc: 'RDV & Planning' },
-            ].map(({ role, desc }) => (
+              { role: 'admin',    label: 'Administrateur', desc: 'Accès complet'   },
+              { role: 'caissier', label: 'Caissier',       desc: 'Caisse, stock & RDV' },
+              { role: 'medecin',  label: 'Thérapeute',     desc: 'RDV & Planning'  },
+            ].map(({ role, label, desc }) => (
               <div key={role} className="flex items-start gap-2 rounded-lg border border-stone-200 dark:border-slate-600 p-3">
                 <span className={cn('mt-0.5 rounded-full px-2 py-0.5 text-xs font-medium', ROLE_BADGE[role] ?? 'bg-stone-100 text-stone-600')}>
-                  {role[0]}
+                  {label[0]}
                 </span>
                 <div>
-                  <p className="text-xs font-semibold text-slate-900 dark:text-white">{role}</p>
+                  <p className="text-xs font-semibold text-slate-900 dark:text-white">{label}</p>
                   <p className="text-xs text-stone-400 dark:text-slate-500">{desc}</p>
                 </div>
               </div>
@@ -846,7 +985,7 @@ interface Props {
   establishment: Establishment | null
   establishments: Establishment[]
   logs: AuditLogEntry[]
-  users: AppUser[]
+  users: UserProfile[]
   isAdmin: boolean
 }
 

@@ -4,13 +4,14 @@ import { getEstablishments } from '@/lib/db/establishments'
 import { getCurrentSpaId } from '@/lib/spa'
 import { getRecentAuditLogs } from '@/lib/db/audit'
 import { getCurrentUserRole } from '@/lib/user-role'
-import { appUsers } from '@/lib/mock-data'
+import { getAppUsers } from '@/lib/db/users'
 
 export default async function SettingsPage() {
-  const [establishments, logs, role] = await Promise.all([
+  const [establishments, logs, role, users] = await Promise.all([
     getEstablishments(),
     getRecentAuditLogs(50),
     getCurrentUserRole(),
+    getAppUsers(),
   ])
 
   const currentSpaId = getCurrentSpaId()
@@ -23,7 +24,7 @@ export default async function SettingsPage() {
         establishment={current}
         establishments={establishments}
         logs={logs}
-        users={appUsers}
+        users={users}
         isAdmin={role === 'admin'}
       />
     </>

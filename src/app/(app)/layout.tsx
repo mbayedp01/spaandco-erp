@@ -13,11 +13,16 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   ])
 
   const spaName = establishments.find(e => e.id === currentSpaId)?.name ?? ''
-  const isDark  = spaName === 'Plateau'
+
+  const SPA_THEME: Record<string, string> = {
+    'Mermoz':  'spa-mermoz',
+    'Plateau': 'dark',
+  }
+  const spaThemeClass = SPA_THEME[spaName] ?? ''
 
   return (
     <SpaProvider establishments={establishments} currentSpaId={currentSpaId} userRole={userRole}>
-      <div className={`flex h-screen overflow-hidden ${isDark ? 'dark' : ''}`}>
+      <div className={`flex h-screen overflow-hidden ${spaThemeClass}`}>
         <Sidebar establishments={establishments} currentSpaId={currentSpaId} userRole={userRole} />
         <div className="flex flex-1 flex-col overflow-hidden pb-16 lg:pb-0 bg-stone-50 dark:bg-slate-900">
           {children}

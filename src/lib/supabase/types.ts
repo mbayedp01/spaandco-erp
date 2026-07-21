@@ -199,6 +199,19 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['campaigns']['Row'], 'id' | 'created_at'>
         Update: Partial<Database['public']['Tables']['campaigns']['Insert']>
       }
+      user_profiles: {
+        Row: {
+          id: string
+          email: string
+          name: string | null
+          role: string
+          status: string
+          last_login: string | null
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['user_profiles']['Row'], 'created_at'>
+        Update: Partial<Omit<Database['public']['Tables']['user_profiles']['Row'], 'id' | 'created_at'>>
+      }
     }
     Views: Record<string, never>
     Functions: Record<string, never>
