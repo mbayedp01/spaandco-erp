@@ -4,7 +4,6 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { Sparkles } from 'lucide-react'
-// cn kept for ROLE_COLORS badge below
 import { getNavItemsForRole } from './nav-items'
 import { SpaSwitcher } from './spa-switcher'
 import { ROLE_LABELS, ROLE_COLORS } from '@/lib/roles'
@@ -23,7 +22,10 @@ export function Sidebar({ establishments, currentSpaId, userRole }: SidebarProps
   const items    = getNavItemsForRole(userRole)
 
   return (
-    <aside className="hidden w-64 shrink-0 flex-col bg-sidebar text-stone-300 lg:flex border-r-2 border-r-primary-600">
+    <aside
+      className="hidden w-64 shrink-0 flex-col text-stone-300 lg:flex border-r-2 border-r-primary-600"
+      style={{ backgroundColor: 'rgb(var(--sidebar-bg))' }}
+    >
       <div className="flex h-14 items-center gap-2 px-6">
         <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary-600">
           <Sparkles className="h-3.5 w-3.5 text-white" />
@@ -31,7 +33,7 @@ export function Sidebar({ establishments, currentSpaId, userRole }: SidebarProps
         <span className="text-sm font-bold text-white">Spa and Co</span>
       </div>
 
-      <div className="border-b border-sidebar-light pb-1">
+      <div className="border-b pb-1" style={{ borderColor: 'rgb(var(--sidebar-mid))' }}>
         <SpaSwitcher establishments={establishments} currentSpaId={currentSpaId} />
       </div>
 
@@ -52,8 +54,11 @@ export function Sidebar({ establishments, currentSpaId, userRole }: SidebarProps
                     'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
                     active
                       ? 'bg-primary-600 text-white'
-                      : 'text-stone-400 hover:bg-sidebar-light hover:text-white'
+                      : 'text-stone-400 hover:text-white',
                   )}
+                  style={!active ? undefined : undefined}
+                  onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.backgroundColor = 'rgb(var(--sidebar-mid))' }}
+                  onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.backgroundColor = '' }}
                 >
                   <Icon className="h-4 w-4 shrink-0" />
                   <span className="flex-1 whitespace-nowrap">{item.label}</span>
@@ -64,7 +69,7 @@ export function Sidebar({ establishments, currentSpaId, userRole }: SidebarProps
         })}
       </nav>
 
-      <div className="border-t border-sidebar-light px-5 py-3">
+      <div className="border-t px-5 py-3" style={{ borderColor: 'rgb(var(--sidebar-mid))' }}>
         <span className={cn('rounded-full px-2.5 py-0.5 text-[10px] font-semibold', ROLE_COLORS[userRole])}>
           {ROLE_LABELS[userRole]}
         </span>

@@ -56,7 +56,7 @@ export function SpaSwitcher({
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute left-3 right-3 top-full z-50 mt-1 overflow-hidden rounded-md border border-white/10 bg-[#1e1c32] py-1 shadow-2xl">
+          <div className="absolute left-3 right-3 top-full z-50 mt-1 overflow-hidden rounded-md border border-white/10 py-1 shadow-2xl" style={{ backgroundColor: 'rgb(var(--sidebar-mid))' }}>
             <p className="px-3 pb-1 pt-1.5 text-[9px] font-semibold uppercase tracking-widest text-stone-600">
               Établissement
             </p>

@@ -66,7 +66,7 @@ export function BottomNav() {
 
             {/* Spa switcher — admin only */}
             {userRole === 'admin' && establishments.length > 0 && (
-              <div className="mx-4 mb-3 rounded-xl bg-sidebar overflow-hidden">
+              <div className="mx-4 mb-3 rounded-xl overflow-hidden" style={{ backgroundColor: 'rgb(var(--sidebar-bg))' }}>
                 <SpaSwitcher establishments={establishments} currentSpaId={currentSpaId} />
               </div>
             )}

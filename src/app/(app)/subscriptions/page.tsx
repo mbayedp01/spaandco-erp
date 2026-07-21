@@ -2,8 +2,10 @@ import { Header } from '@/components/layout/header'
 import { getMembershipPlans, getMemberships } from '@/lib/db/subscriptions'
 import { getClients } from '@/lib/db/clients'
 import { getCurrentSpaId } from '@/lib/spa'
+import { getCurrentUserRole } from '@/lib/user-role'
 import { AddSubscriptionButton } from '@/components/forms/subscription-form'
 import { EditMembershipButton, DeleteMembershipButton } from './membership-actions'
+import { AddPlanButton, EditPlanButton, TogglePlanButton, DeletePlanButton } from './plan-actions'
 import { cn } from '@/lib/utils'
 import { BadgeCheck, TrendingUp } from 'lucide-react'
 
@@ -22,12 +24,14 @@ const planBadge: Record<string, string> = {
 
 export default async function SubscriptionsPage() {
   const spaId = getCurrentSpaId()
-  const [plans, memberships, clients] = await Promise.all([
-    getMembershipPlans(),
+  const [plans, memberships, clients, role] = await Promise.all([
+    getMembershipPlans(spaId),
     getMemberships(),
     getClients(spaId),
+    getCurrentUserRole(),
   ])
 
+  const isAdmin = role === 'admin'
   const clientItems = clients.map(c => ({ id: c.id, name: `${c.first_name} ${c.last_name}` }))
 
   const activeCount    = memberships.filter((m) => m.status === 'actif').length
@@ -78,36 +82,72 @@ export default async function SubscriptionsPage() {
           </div>
         </div>
 
-        <h2 className="mb-4 font-semibold text-slate-900">Formules disponibles</h2>
-        <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {plans.map((plan) => {
-            const subscriberCount = memberships.filter((m) => m.plan_name === plan.name && m.status === 'actif').length
-            return (
-              <div key={plan.id} className="overflow-hidden rounded-xl border border-stone-200 bg-white shadow-xs">
-                <div className={cn('bg-gradient-to-br p-5 text-white', plan.color ?? 'from-primary-500 to-primary-700')}>
-                  <p className="text-sm font-medium opacity-90">{plan.name}</p>
-                  <p className="mt-1 text-2xl font-bold">{plan.price.toLocaleString('fr-FR')} F</p>
-                  <p className="text-xs opacity-75">/ mois</p>
-                </div>
-                <div className="p-4">
-                  <ul className="space-y-1.5">
-                    {plan.avantages.map((a) => (
-                      <li key={a} className="flex items-start gap-2 text-xs text-stone-600">
-                        <BadgeCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary-500" />
-                        {a}
-                      </li>
-                    ))}
-                  </ul>
-                  <div className="mt-3 flex items-center justify-between border-t border-stone-100 pt-3">
-                    <span className="text-xs text-stone-400">{subscriberCount} abonné{subscriberCount > 1 ? 's' : ''}</span>
-                    <span className="text-xs font-medium text-primary-600">-{plan.remise}% remise</span>
-                  </div>
-                </div>
-              </div>
-            )
-          })}
+        {/* ── Formules disponibles ── */}
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="font-semibold text-slate-900">Formules disponibles</h2>
+          {isAdmin && <AddPlanButton />}
         </div>
 
+        {plans.length === 0 ? (
+          <div className="mb-8 rounded-xl border border-dashed border-stone-200 py-10 text-center text-sm text-stone-400">
+            Aucun plan pour ce spa.{isAdmin ? ' Créez le premier !' : ''}
+          </div>
+        ) : (
+          <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {plans.map((plan) => {
+              const subscriberCount = memberships.filter((m) => m.plan_name === plan.name && m.status === 'actif').length
+              const inactive = plan.active === false
+              return (
+                <div key={plan.id} className={cn('overflow-hidden rounded-xl border bg-white shadow-xs', inactive ? 'border-stone-100 opacity-60' : 'border-stone-200')}>
+                  <div className={cn('bg-gradient-to-br p-5 text-white', plan.color ?? 'from-primary-500 to-primary-700')}>
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className="text-sm font-medium opacity-90">{plan.name}</p>
+                        <p className="mt-1 text-2xl font-bold">{plan.price.toLocaleString('fr-FR')} F</p>
+                        <p className="text-xs opacity-75">/ {plan.payment_frequency ?? 'mois'}</p>
+                      </div>
+                      {inactive && (
+                        <span className="rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-semibold">Inactif</span>
+                      )}
+                    </div>
+                    {plan.description && (
+                      <p className="mt-2 text-xs opacity-80">{plan.description}</p>
+                    )}
+                  </div>
+                  <div className="p-4">
+                    {plan.sessions_count && (
+                      <p className="mb-2 text-xs font-medium text-stone-500">{plan.sessions_count} séance{plan.sessions_count > 1 ? 's' : ''} incluse{plan.sessions_count > 1 ? 's' : ''}</p>
+                    )}
+                    <ul className="space-y-1.5">
+                      {plan.avantages.map((a) => (
+                        <li key={a} className="flex items-start gap-2 text-xs text-stone-600">
+                          <BadgeCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary-500" />
+                          {a}
+                        </li>
+                      ))}
+                    </ul>
+                    {plan.conditions && (
+                      <p className="mt-2 text-[11px] italic text-stone-400">{plan.conditions}</p>
+                    )}
+                    <div className="mt-3 flex items-center justify-between border-t border-stone-100 pt-3">
+                      <span className="text-xs text-stone-400">{subscriberCount} abonné{subscriberCount > 1 ? 's' : ''}</span>
+                      <span className="text-xs font-medium text-primary-600">-{plan.remise}%</span>
+                    </div>
+                    {isAdmin && (
+                      <div className="mt-2 flex items-center justify-end gap-0.5 border-t border-stone-100 pt-2">
+                        <TogglePlanButton plan={plan} />
+                        <EditPlanButton plan={plan} />
+                        <DeletePlanButton plan={plan} />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {/* ── Liste des abonnés ── */}
         <div className="rounded-lg border border-stone-200 bg-white shadow-xs">
           <div className="flex items-center justify-between border-b border-stone-200 px-5 py-4">
             <h2 className="font-semibold text-slate-900">Abonnés ({memberships.length})</h2>
@@ -144,7 +184,7 @@ export default async function SubscriptionsPage() {
                         <span className={cn('rounded-full px-2.5 py-0.5 text-xs font-semibold', planBadge[m.plan_name ?? ''] ?? 'bg-stone-100 text-stone-600')}>
                           {m.plan_name}
                         </span>
-                        {plan && <span className="ml-2 text-xs text-stone-400">{plan.price.toLocaleString('fr-FR')} F/mois</span>}
+                        {plan && <span className="ml-2 text-xs text-stone-400">{plan.price.toLocaleString('fr-FR')} F/{plan.payment_frequency ?? 'mois'}</span>}
                       </td>
                       <td className="hidden px-5 py-3.5 text-stone-500 sm:table-cell">{m.since}</td>
                       <td className="hidden px-5 py-3.5 md:table-cell">
@@ -169,6 +209,13 @@ export default async function SubscriptionsPage() {
                     </tr>
                   )
                 })}
+                {memberships.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="py-10 text-center text-sm text-stone-400">
+                      Aucun abonné pour ce spa.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

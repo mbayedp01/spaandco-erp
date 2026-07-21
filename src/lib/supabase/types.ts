@@ -163,6 +163,14 @@ export interface Database {
           remise: number
           color: string | null
           avantages: string[]
+          spa_id: string | null
+          active: boolean
+          description: string | null
+          duration_days: number | null
+          sessions_count: number | null
+          payment_frequency: string | null
+          services: string[] | null
+          conditions: string | null
           created_at: string
         }
         Insert: Omit<Database['public']['Tables']['membership_plans']['Row'], 'id' | 'created_at'>
