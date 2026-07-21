@@ -18,7 +18,11 @@ export async function createClientAction(formData: FormData): Promise<{ error?: 
 
   const spa_id = getCurrentSpaId()
   const result = await createClient({ first_name, last_name, email, phone, birth_date, spa_id })
-  if (result.error) return { error: result.error }
+  if (result.error) {
+    if (result.error.includes('clients_email_key') || result.error.includes('unique'))
+      return { error: 'Cette adresse email est déjà utilisée par un autre client.' }
+    return { error: result.error }
+  }
   revalidatePath('/clients')
   return {}
 }
