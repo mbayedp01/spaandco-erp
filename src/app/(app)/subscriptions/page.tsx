@@ -1,6 +1,7 @@
 import { Header } from '@/components/layout/header'
 import { getMembershipPlans, getMemberships } from '@/lib/db/subscriptions'
 import { getClients } from '@/lib/db/clients'
+import { getCurrentSpaId } from '@/lib/spa'
 import { AddSubscriptionButton } from '@/components/forms/subscription-form'
 import { EditMembershipButton, DeleteMembershipButton } from './membership-actions'
 import { cn } from '@/lib/utils'
@@ -20,10 +21,11 @@ const planBadge: Record<string, string> = {
 }
 
 export default async function SubscriptionsPage() {
+  const spaId = getCurrentSpaId()
   const [plans, memberships, clients] = await Promise.all([
     getMembershipPlans(),
     getMemberships(),
-    getClients(),
+    getClients(spaId),
   ])
 
   const clientItems = clients.map(c => ({ id: c.id, name: `${c.first_name} ${c.last_name}` }))

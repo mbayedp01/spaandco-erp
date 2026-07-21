@@ -28,7 +28,7 @@ export default async function AppointmentsPage() {
     getCurrentUserName(),
     getStaff(spaId),
     getServices(spaId),
-    getClients(),
+    getClients(spaId),
   ])
 
   const allAppointments = await getAppointments(spaId)
@@ -124,7 +124,7 @@ export default async function AppointmentsPage() {
                   <p className="font-semibold text-slate-900">{a.client_name}</p>
                   <p className="text-sm text-stone-500">{a.service_name}</p>
                   {!isMedecin && a.staff_name && (
-                    <p className="text-xs text-stone-400">Médecin : {a.staff_name}</p>
+                    <p className="text-xs text-stone-400">Thérapeute : {a.staff_name}</p>
                   )}
                   {a.notes && (
                     <p className="mt-1.5 rounded-lg bg-amber-50 px-3 py-1.5 text-xs text-amber-700 italic">

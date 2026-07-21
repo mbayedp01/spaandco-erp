@@ -3,7 +3,7 @@ export type UserRole = 'admin' | 'caissier' | 'medecin'
 export const ROLE_LABELS: Record<UserRole, string> = {
   admin:    'Administrateur',
   caissier: 'Caissier',
-  medecin:  'Médecin',
+  medecin:  'Thérapeute',
 }
 
 export const ROLE_COLORS: Record<UserRole, string> = {
@@ -20,7 +20,7 @@ const ROLE_ROUTES: Record<UserRole, string[]> = {
     'cash', 'accounting', 'marketing', 'reports', 'settings',
   ],
   caissier: [
-    'dashboard', 'clients', 'subscriptions', 'appointments', 'cash',
+    'dashboard', 'clients', 'subscriptions', 'appointments', 'cash', 'inventory',
   ],
   medecin: [
     'dashboard', 'clients', 'subscriptions', 'appointments', 'services', 'planning',

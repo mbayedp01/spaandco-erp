@@ -50,7 +50,7 @@ async function getWeekAppointments(
   return (data as Appointment[] | null) ?? []
 }
 
-// ─── Vue Médecin ──────────────────────────────────────────────────────────────
+// ─── Vue Thérapeute ───────────────────────────────────────────────────────────
 
 function MedecinView({
   appointments, weekDays, todayIndex, weekLabel,
@@ -188,7 +188,7 @@ function AdminCaissierView({
       <div className="mb-5 grid grid-cols-2 gap-4 sm:grid-cols-4">
         {[
           { icon: CalendarDays, label: 'RDV cette semaine', value: totalRdv,       color: 'text-primary-700', bg: 'bg-primary-50' },
-          { icon: UserCheck,    label: 'Médecins actifs',   value: therapists.filter(t => t.status === 'active').length, color: 'text-emerald-700', bg: 'bg-emerald-50' },
+          { icon: UserCheck,    label: 'Thérapeutes actifs', value: therapists.filter(t => t.status === 'active').length, color: 'text-emerald-700', bg: 'bg-emerald-50' },
           { icon: Clock,        label: 'Heures planifiées', value: `${Math.floor(appointments.filter(a=>a.status!=='cancelled').reduce((s,a)=>s+(a.duration??0),0)/60)}h`, color: 'text-amber-700', bg: 'bg-amber-50' },
           { icon: Users,        label: "Aujourd'hui",       value: todayCount,      color: 'text-slate-700',   bg: 'bg-stone-50' },
         ].map((k) => (
@@ -207,12 +207,12 @@ function AdminCaissierView({
       {/* Grille semaine */}
       <h2 className="mb-3 font-semibold text-slate-900">
         Planning de la semaine
-        <span className="ml-2 text-sm font-normal text-stone-400">(vue par médecin)</span>
+        <span className="ml-2 text-sm font-normal text-stone-400">(vue par thérapeute)</span>
       </h2>
       <div className="overflow-x-auto rounded-xl border border-stone-200 bg-white shadow-xs">
         <div className="min-w-[700px]">
           <div className="grid border-b border-stone-200" style={{ gridTemplateColumns: '160px repeat(6, 1fr)' }}>
-            <div className="border-r border-stone-200 px-4 py-3 text-xs font-medium text-stone-400">Médecin</div>
+            <div className="border-r border-stone-200 px-4 py-3 text-xs font-medium text-stone-400">Thérapeute</div>
             {weekDays.map((d, i) => (
               <div key={d.short} className={cn('border-r border-stone-200 px-3 py-3 text-center last:border-r-0', i === todayIndex && 'bg-primary-50')}>
                 <p className={cn('text-xs', i === todayIndex ? 'text-primary-600 font-semibold' : 'text-stone-400')}>{d.short}</p>
@@ -273,7 +273,7 @@ function AdminCaissierView({
 
           {therapists.length === 0 && (
             <div className="py-12 text-center text-sm text-stone-400">
-              Aucun médecin enregistré — ajoutez du personnel d&apos;abord.
+              Aucun thérapeute enregistré — ajoutez du personnel d&apos;abord.
             </div>
           )}
         </div>

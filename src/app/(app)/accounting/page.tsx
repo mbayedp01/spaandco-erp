@@ -2,13 +2,20 @@ import { Header } from '@/components/layout/header'
 import { revenueByMonth, expenseCategories } from '@/lib/mock-data'
 import { getCashTransactions } from '@/lib/db/cash'
 import { getCurrentSpaId } from '@/lib/spa'
+import { createServerClient } from '@/lib/supabase/server'
 import { ComptaBarChart, ExpensePieChart } from '@/components/reports/charts'
+import { ExportButton } from './export-button'
 import { cn } from '@/lib/utils'
-import { TrendingUp, TrendingDown, Download } from 'lucide-react'
+import { TrendingUp, TrendingDown } from 'lucide-react'
 
 export default async function AccountingPage() {
   const spaId = getCurrentSpaId()
-  const transactions = await getCashTransactions(spaId)
+  const supabase = createServerClient()
+  const [transactions, spaResult] = await Promise.all([
+    getCashTransactions(spaId),
+    supabase.from('establishments').select('name').eq('id', spaId).single(),
+  ])
+  const spaName = (spaResult.data as { name?: string } | null)?.name ?? 'Spa'
   const lastMonth = revenueByMonth[revenueByMonth.length - 1]
   const prevMonth = revenueByMonth[revenueByMonth.length - 2]
   const profit = lastMonth.ca - lastMonth.depenses
@@ -59,10 +66,16 @@ export default async function AccountingPage() {
           <div className="rounded-lg border border-stone-200 bg-white p-5 shadow-xs lg:col-span-2">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="font-semibold text-slate-900">CA vs Dépenses — 12 mois</h2>
-              <button className="flex items-center gap-1.5 rounded-md border border-stone-200 px-3 py-1.5 text-xs text-stone-600 hover:bg-stone-50 cursor-pointer">
-                <Download className="h-3.5 w-3.5" />
-                Export
-              </button>
+              <ExportButton
+                spaName={spaName}
+                monthlyData={revenueByMonth}
+                transactions={transactions.map(t => ({
+                  date: t.date,
+                  label: t.label ?? '',
+                  type: t.type,
+                  amount: t.amount,
+                }))}
+              />
             </div>
             <ComptaBarChart />
           </div>

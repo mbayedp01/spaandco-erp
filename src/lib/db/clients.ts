@@ -3,13 +3,19 @@ import type { Database } from '@/lib/supabase/types'
 
 type Client = Database['public']['Tables']['clients']['Row']
 
-export async function getClients(): Promise<Client[]> {
+export async function getClients(spaId?: string | null): Promise<Client[]> {
   const supabase = createServerClient()
-  const { data, error } = await supabase
-    .from('clients')
-    .select('*')
-    .order('total_spent', { ascending: false })
-  if (error) console.error('getClients:', error.message)
+  let q = supabase.from('clients').select('*').order('total_spent', { ascending: false })
+  if (spaId) q = (q as any).eq('spa_id', spaId)
+  const { data, error } = await q
+  if (error) {
+    console.error('getClients:', error.message)
+    // Fallback sans filtre si la colonne spa_id n'existe pas encore en DB
+    if (spaId && error.message.includes('spa_id')) {
+      const { data: fallback } = await supabase.from('clients').select('*').order('total_spent', { ascending: false })
+      return (fallback as Client[] | null) ?? []
+    }
+  }
   return (data as Client[] | null) ?? []
 }
 
@@ -19,6 +25,7 @@ export async function createClient(payload: {
   email: string
   phone: string
   birth_date?: string | null
+  spa_id?: string | null
 }): Promise<Client> {
   const supabase = createServerClient()
   const { data, error } = await supabase

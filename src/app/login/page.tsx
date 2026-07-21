@@ -9,7 +9,7 @@ const FEATURES = [
   'Gestion multi-établissements',
   'Rendez-vous & planning en temps réel',
   'Caisse, inventaire & comptabilité',
-  'Accès multi-rôles (Admin, Caissier, Médecin)',
+  'Accès multi-rôles (Admin, Caissier, Thérapeute)',
 ]
 
 function SubmitButton() {

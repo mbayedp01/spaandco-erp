@@ -16,7 +16,8 @@ export async function createClientAction(formData: FormData) {
 
   if (!first_name || !last_name) throw new Error('Prénom et nom requis')
 
-  await createClient({ first_name, last_name, email, phone, birth_date })
+  const spa_id = getCurrentSpaId()
+  await createClient({ first_name, last_name, email, phone, birth_date, spa_id })
   revalidatePath('/clients')
 }
 

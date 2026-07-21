@@ -30,6 +30,7 @@ export interface Database {
           total_spent: number
           visits_count: number
           join_date: string
+          spa_id: string | null
           created_at: string
         }
         Insert: Omit<Database['public']['Tables']['clients']['Row'], 'id' | 'created_at'>
