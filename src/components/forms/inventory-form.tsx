@@ -20,17 +20,12 @@ function InventoryForm({ item, onClose }: { item?: InventoryItem; onClose: () =>
     setError('')
     const fd = new FormData(e.currentTarget)
     startTransition(async () => {
-      try {
-        if (item) {
-          await updateInventoryAction(item.id, fd)
-        } else {
-          await createInventoryAction(fd)
-          ;(e.target as HTMLFormElement).reset()
-        }
-        onClose()
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Erreur')
-      }
+      const result = item
+        ? await updateInventoryAction(item.id, fd)
+        : await createInventoryAction(fd)
+      if (result.error) { setError(result.error); return }
+      if (!item) (e.target as HTMLFormElement).reset()
+      onClose()
     })
   }
 
@@ -121,7 +116,7 @@ export function DeleteInventoryButton({ id }: { id: string }) {
   const [pending, startTransition] = useTransition()
   function handleDelete() {
     if (!confirm('Supprimer ce produit du stock ?')) return
-    startTransition(() => deleteInventoryAction(id))
+    startTransition(async () => { await deleteInventoryAction(id) })
   }
   return (
     <button onClick={handleDelete} disabled={pending} className="rounded-md p-1.5 text-stone-400 hover:bg-rose-50 hover:text-rose-600 cursor-pointer transition-colors disabled:opacity-40" title="Supprimer">

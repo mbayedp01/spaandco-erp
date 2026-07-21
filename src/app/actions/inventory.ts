@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createServerClient } from '@/lib/supabase/server'
 import { getCurrentSpaId } from '@/lib/spa'
 
-export async function createInventoryAction(formData: FormData): Promise<void> {
+export async function createInventoryAction(formData: FormData): Promise<{ error?: string }> {
   const spaId       = getCurrentSpaId()
   const name        = String(formData.get('name')        ?? '').trim()
   const category    = String(formData.get('category')    ?? '').trim()
@@ -14,7 +14,7 @@ export async function createInventoryAction(formData: FormData): Promise<void> {
   const supplier    = String(formData.get('supplier')    ?? '').trim()
   const unit_price  = Number(formData.get('unit_price')) || null
 
-  if (!name) throw new Error('Nom du produit requis')
+  if (!name) return { error: 'Nom du produit requis' }
 
   const supabase = createServerClient()
   const { error } = await supabase.from('inventory').insert({
@@ -26,11 +26,12 @@ export async function createInventoryAction(formData: FormData): Promise<void> {
     spa_id: spaId,
   } as any)
 
-  if (error) throw new Error(error.message)
+  if (error) return { error: error.message }
   revalidatePath('/inventory')
+  return {}
 }
 
-export async function updateInventoryAction(id: string, formData: FormData): Promise<void> {
+export async function updateInventoryAction(id: string, formData: FormData): Promise<{ error?: string }> {
   const name         = String(formData.get('name')         ?? '').trim()
   const category     = String(formData.get('category')     ?? '').trim()
   const quantity     = Number(formData.get('quantity'))    || 0
@@ -39,19 +40,21 @@ export async function updateInventoryAction(id: string, formData: FormData): Pro
   const supplier     = String(formData.get('supplier')     ?? '').trim()
   const unit_price   = Number(formData.get('unit_price'))  || null
 
-  if (!name) throw new Error('Nom du produit requis')
+  if (!name) return { error: 'Nom du produit requis' }
 
   const supabase = createServerClient()
   const { error } = await (supabase.from('inventory') as any)
     .update({ name, quantity, min_quantity, category: category || null, unit: unit || null, supplier: supplier || null, unit_price })
     .eq('id', id)
-  if (error) throw new Error(error.message)
+  if (error) return { error: error.message }
   revalidatePath('/inventory')
+  return {}
 }
 
-export async function deleteInventoryAction(id: string): Promise<void> {
+export async function deleteInventoryAction(id: string): Promise<{ error?: string }> {
   const supabase = createServerClient()
   const { error } = await (supabase.from('inventory') as any).delete().eq('id', id)
-  if (error) throw new Error(error.message)
+  if (error) return { error: error.message }
   revalidatePath('/inventory')
+  return {}
 }

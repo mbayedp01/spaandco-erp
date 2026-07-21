@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createServerClient } from '@/lib/supabase/server'
 import { getCurrentSpaId } from '@/lib/spa'
 
-export async function createSupplierAction(formData: FormData): Promise<void> {
+export async function createSupplierAction(formData: FormData): Promise<{ error?: string }> {
   const spaId         = getCurrentSpaId()
   const name          = String(formData.get('name')          ?? '').trim()
   const category      = String(formData.get('category')      ?? '').trim()
@@ -13,7 +13,7 @@ export async function createSupplierAction(formData: FormData): Promise<void> {
   const email         = String(formData.get('email')         ?? '').trim()
   const monthly_spend = Number(formData.get('monthly_spend')) || 0
 
-  if (!name) throw new Error('Nom du fournisseur requis')
+  if (!name) return { error: 'Nom du fournisseur requis' }
 
   const supabase = createServerClient()
   const { error } = await supabase.from('suppliers').insert({
@@ -28,11 +28,12 @@ export async function createSupplierAction(formData: FormData): Promise<void> {
     spa_id: spaId,
   } as any)
 
-  if (error) throw new Error(error.message)
+  if (error) return { error: error.message }
   revalidatePath('/suppliers')
+  return {}
 }
 
-export async function updateSupplierAction(id: string, formData: FormData): Promise<void> {
+export async function updateSupplierAction(id: string, formData: FormData): Promise<{ error?: string }> {
   const name          = String(formData.get('name')          ?? '').trim()
   const category      = String(formData.get('category')      ?? '').trim()
   const contact       = String(formData.get('contact')       ?? '').trim()
@@ -41,19 +42,21 @@ export async function updateSupplierAction(id: string, formData: FormData): Prom
   const monthly_spend = Number(formData.get('monthly_spend')) || 0
   const status        = String(formData.get('status')        ?? 'actif').trim()
 
-  if (!name) throw new Error('Nom du fournisseur requis')
+  if (!name) return { error: 'Nom du fournisseur requis' }
 
   const supabase = createServerClient()
   const { error } = await (supabase.from('suppliers') as any)
     .update({ name, category: category || null, contact: contact || null, phone: phone || null, email: email || null, monthly_spend, status })
     .eq('id', id)
-  if (error) throw new Error(error.message)
+  if (error) return { error: error.message }
   revalidatePath('/suppliers')
+  return {}
 }
 
-export async function deleteSupplierAction(id: string): Promise<void> {
+export async function deleteSupplierAction(id: string): Promise<{ error?: string }> {
   const supabase = createServerClient()
   const { error } = await (supabase.from('suppliers') as any).delete().eq('id', id)
-  if (error) throw new Error(error.message)
+  if (error) return { error: error.message }
   revalidatePath('/suppliers')
+  return {}
 }

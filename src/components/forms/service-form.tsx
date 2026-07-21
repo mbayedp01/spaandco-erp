@@ -30,17 +30,12 @@ function ServiceFormContent({ service, onClose }: Props) {
     const fd = new FormData(e.currentTarget)
     fd.set('active', String(active))
     startTransition(async () => {
-      try {
-        if (isEdit) {
-          await updateServiceAction(service.id, fd)
-        } else {
-          await createServiceAction(fd)
-        }
-        onClose?.()
-        if (!isEdit) (e.target as HTMLFormElement).reset()
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Erreur')
-      }
+      const result = isEdit
+        ? await updateServiceAction(service.id, fd)
+        : await createServiceAction(fd)
+      if (result.error) { setError(result.error); return }
+      if (!isEdit) (e.target as HTMLFormElement).reset()
+      onClose?.()
     })
   }
 

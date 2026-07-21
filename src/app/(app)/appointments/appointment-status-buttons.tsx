@@ -13,7 +13,7 @@ export function AppointmentStatusButtons({ id, currentStatus }: Props) {
   const [pending, startTransition] = useTransition()
 
   function update(status: string) {
-    startTransition(() => updateAppointmentStatusAction(id, status))
+    startTransition(async () => { await updateAppointmentStatusAction(id, status) })
   }
 
   if (currentStatus === 'completed' || currentStatus === 'cancelled') return null

@@ -208,12 +208,9 @@ export function AddAppointmentButton({
       return
     }
     startTransition(async () => {
-      try {
-        await createAppointmentAction(fd)
-        handleClose()
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Erreur')
-      }
+      const result = await createAppointmentAction(fd)
+      if (result.error) { setError(result.error); return }
+      handleClose()
     })
   }
 

@@ -112,12 +112,9 @@ export function AddSubscriptionButton({
     }
     fd.set('soins_restants', soins)
     startTransition(async () => {
-      try {
-        await createSubscriptionAction(fd)
-        handleClose()
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Erreur inconnue')
-      }
+      const result = await createSubscriptionAction(fd)
+      if (result.error) { setError(result.error); return }
+      handleClose()
     })
   }
 

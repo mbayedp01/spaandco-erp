@@ -26,12 +26,9 @@ export function EditMembershipButton({ membership }: { membership: Membership })
     setError('')
     const fd = new FormData(e.currentTarget)
     startTransition(async () => {
-      try {
-        await updateMembershipAction(membership.id, fd)
-        setOpen(false)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Erreur')
-      }
+      const result = await updateMembershipAction(membership.id, fd)
+      if (result.error) { setError(result.error); return }
+      setOpen(false)
     })
   }
 
@@ -77,7 +74,7 @@ export function DeleteMembershipButton({ id }: { id: string }) {
   const [pending, startTransition] = useTransition()
   function handleDelete() {
     if (!confirm('Supprimer cet abonnement ?')) return
-    startTransition(() => deleteMembershipAction(id))
+    startTransition(async () => { await deleteMembershipAction(id) })
   }
   return (
     <button onClick={handleDelete} disabled={pending} className="rounded-md p-1.5 text-stone-400 hover:bg-rose-50 hover:text-rose-600 cursor-pointer transition-colors disabled:opacity-40" title="Supprimer">

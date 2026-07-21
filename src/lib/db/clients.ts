@@ -10,7 +10,6 @@ export async function getClients(spaId?: string | null): Promise<Client[]> {
   const { data, error } = await q
   if (error) {
     console.error('getClients:', error.message)
-    // Fallback sans filtre si la colonne spa_id n'existe pas encore en DB
     if (spaId && error.message.includes('spa_id')) {
       const { data: fallback } = await supabase.from('clients').select('*').order('total_spent', { ascending: false })
       return (fallback as Client[] | null) ?? []
@@ -26,13 +25,21 @@ export async function createClient(payload: {
   phone: string
   birth_date?: string | null
   spa_id?: string | null
-}): Promise<Client> {
+}): Promise<{ data?: Client; error?: string }> {
   const supabase = createServerClient()
+  const today = new Date().toISOString().split('T')[0]
   const { data, error } = await supabase
     .from('clients')
-    .insert({ ...payload, loyalty_points: 0, is_vip: false, total_spent: 0, visits_count: 0 } as any)
+    .insert({
+      ...payload,
+      join_date: today,
+      loyalty_points: 0,
+      is_vip: false,
+      total_spent: 0,
+      visits_count: 0,
+    } as any)
     .select()
     .single()
-  if (error) throw new Error(error.message)
-  return data as Client
+  if (error) return { error: error.message }
+  return { data: data as Client }
 }

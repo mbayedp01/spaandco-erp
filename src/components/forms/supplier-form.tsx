@@ -20,17 +20,12 @@ function SupplierForm({ supplier, onClose }: { supplier?: Supplier; onClose: () 
     setError('')
     const fd = new FormData(e.currentTarget)
     startTransition(async () => {
-      try {
-        if (supplier) {
-          await updateSupplierAction(supplier.id, fd)
-        } else {
-          await createSupplierAction(fd)
-          ;(e.target as HTMLFormElement).reset()
-        }
-        onClose()
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Erreur')
-      }
+      const result = supplier
+        ? await updateSupplierAction(supplier.id, fd)
+        : await createSupplierAction(fd)
+      if (result.error) { setError(result.error); return }
+      if (!supplier) (e.target as HTMLFormElement).reset()
+      onClose()
     })
   }
 
@@ -121,7 +116,7 @@ export function DeleteSupplierButton({ id }: { id: string }) {
   const [pending, startTransition] = useTransition()
   function handleDelete() {
     if (!confirm('Supprimer ce fournisseur ?')) return
-    startTransition(() => deleteSupplierAction(id))
+    startTransition(async () => { await deleteSupplierAction(id) })
   }
   return (
     <button onClick={handleDelete} disabled={pending} className="rounded-md p-1.5 text-stone-400 hover:bg-rose-50 hover:text-rose-600 cursor-pointer transition-colors disabled:opacity-40" title="Supprimer">

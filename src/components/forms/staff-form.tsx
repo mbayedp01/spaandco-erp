@@ -23,18 +23,12 @@ function StaffForm({ member, onClose }: { member?: StaffMember; onClose: () => v
     const fd = new FormData(e.currentTarget)
     fd.set('rating', String(rating || ''))
     startTransition(async () => {
-      try {
-        if (isEdit) {
-          await updateStaffAction(member.id, fd)
-        } else {
-          await createStaffAction(fd)
-          ;(e.target as HTMLFormElement).reset()
-          setRating(0)
-        }
-        onClose()
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Erreur')
-      }
+      const result = isEdit
+        ? await updateStaffAction(member.id, fd)
+        : await createStaffAction(fd)
+      if (result.error) { setError(result.error); return }
+      if (!isEdit) { (e.target as HTMLFormElement).reset(); setRating(0) }
+      onClose()
     })
   }
 
@@ -154,7 +148,7 @@ export function DeleteStaffButton({ id }: { id: string }) {
   const [pending, startTransition] = useTransition()
   function handleDelete() {
     if (!confirm('Supprimer ce membre du personnel ?')) return
-    startTransition(() => deleteStaffAction(id))
+    startTransition(async () => { await deleteStaffAction(id) })
   }
   return (
     <button onClick={handleDelete} disabled={pending} className="rounded-md p-1.5 text-stone-400 hover:bg-rose-50 hover:text-rose-600 cursor-pointer transition-colors disabled:opacity-40" title="Supprimer">

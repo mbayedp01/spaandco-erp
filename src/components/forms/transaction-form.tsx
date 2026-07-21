@@ -18,13 +18,10 @@ export function AddTransactionButton() {
     setError('')
     const fd = new FormData(e.currentTarget)
     startTransition(async () => {
-      try {
-        await addTransactionAction(fd)
-        setOpen(false)
-        ;(e.target as HTMLFormElement).reset()
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Erreur')
-      }
+      const result = await addTransactionAction(fd)
+      if (result.error) { setError(result.error); return }
+      setOpen(false)
+      ;(e.target as HTMLFormElement).reset()
     })
   }
 

@@ -22,7 +22,7 @@ function DeleteServiceButton({ id }: { id: string }) {
   const [pending, startTransition] = useTransition()
   function handleDelete() {
     if (!confirm('Supprimer cette prestation ?')) return
-    startTransition(() => deleteServiceAction(id))
+    startTransition(async () => { await deleteServiceAction(id) })
   }
   return (
     <button

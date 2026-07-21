@@ -7,34 +7,36 @@ import { getCurrentUserRole } from '@/lib/user-role'
 import { getCurrentSpaId } from '@/lib/spa'
 import { logAction } from '@/lib/audit'
 
-export async function createClientAction(formData: FormData) {
+export async function createClientAction(formData: FormData): Promise<{ error?: string }> {
   const first_name = String(formData.get('first_name') ?? '').trim()
   const last_name  = String(formData.get('last_name')  ?? '').trim()
   const email      = String(formData.get('email')      ?? '').trim()
   const phone      = String(formData.get('phone')      ?? '').trim()
   const birth_date = String(formData.get('birth_date') ?? '').trim() || null
 
-  if (!first_name || !last_name) throw new Error('Prénom et nom requis')
+  if (!first_name || !last_name) return { error: 'Prénom et nom requis' }
 
   const spa_id = getCurrentSpaId()
-  await createClient({ first_name, last_name, email, phone, birth_date, spa_id })
+  const result = await createClient({ first_name, last_name, email, phone, birth_date, spa_id })
+  if (result.error) return { error: result.error }
   revalidatePath('/clients')
+  return {}
 }
 
-export async function updateClientAction(id: string, formData: FormData): Promise<void> {
+export async function updateClientAction(id: string, formData: FormData): Promise<{ error?: string }> {
   const first_name = String(formData.get('first_name') ?? '').trim()
   const last_name  = String(formData.get('last_name')  ?? '').trim()
   const email      = String(formData.get('email')      ?? '').trim()
   const phone      = String(formData.get('phone')      ?? '').trim()
   const birth_date = String(formData.get('birth_date') ?? '').trim() || null
 
-  if (!first_name || !last_name) throw new Error('Prénom et nom requis')
+  if (!first_name || !last_name) return { error: 'Prénom et nom requis' }
 
   const supabase = createServerClient()
   const { error } = await (supabase.from('clients') as any)
     .update({ first_name, last_name, email: email || null, phone: phone || null, birth_date })
     .eq('id', id)
-  if (error) throw new Error(error.message)
+  if (error) return { error: error.message }
 
   const role = await getCurrentUserRole()
   if (role === 'caissier') {
@@ -50,9 +52,10 @@ export async function updateClientAction(id: string, formData: FormData): Promis
   }
 
   revalidatePath('/clients')
+  return {}
 }
 
-export async function deleteClientAction(id: string): Promise<void> {
+export async function deleteClientAction(id: string): Promise<{ error?: string }> {
   const supabase = createServerClient()
 
   const { data: clientData } = await (supabase.from('clients') as any)
@@ -61,14 +64,12 @@ export async function deleteClientAction(id: string): Promise<void> {
     .single()
 
   const { error } = await (supabase.from('clients') as any).delete().eq('id', id)
-  if (error) throw new Error(error.message)
+  if (error) return { error: error.message }
 
   const role = await getCurrentUserRole()
   if (role === 'caissier') {
     const { data: { user } } = await supabase.auth.getUser()
-    const name = clientData
-      ? `${clientData.first_name} ${clientData.last_name}`
-      : id
+    const name = clientData ? `${clientData.first_name} ${clientData.last_name}` : id
     await logAction({
       actor_email: user?.email ?? '',
       actor_role:  role,
@@ -80,4 +81,5 @@ export async function deleteClientAction(id: string): Promise<void> {
   }
 
   revalidatePath('/clients')
+  return {}
 }

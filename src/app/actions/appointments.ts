@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createServerClient } from '@/lib/supabase/server'
 import { getCurrentSpaId } from '@/lib/spa'
 
-export async function createAppointmentAction(formData: FormData): Promise<void> {
+export async function createAppointmentAction(formData: FormData): Promise<{ error?: string }> {
   const spaId        = getCurrentSpaId()
   const client_name  = String(formData.get('client_name')  ?? '').trim()
   const staff_name   = String(formData.get('staff_name')   ?? '').trim()
@@ -14,7 +14,7 @@ export async function createAppointmentAction(formData: FormData): Promise<void>
   const duration     = Number(formData.get('duration'))    || 60
   const price        = Number(formData.get('price'))       || 0
 
-  if (!client_name || !date || !time) throw new Error('Client, date et heure requis')
+  if (!client_name || !date || !time) return { error: 'Client, date et heure requis' }
 
   const supabase = createServerClient()
   const { error } = await supabase.from('appointments').insert({
@@ -25,20 +25,22 @@ export async function createAppointmentAction(formData: FormData): Promise<void>
     spa_id: spaId,
   } as any)
 
-  if (error) throw new Error(error.message)
+  if (error) return { error: error.message }
   revalidatePath('/appointments')
   revalidatePath('/dashboard')
   revalidatePath('/planning')
+  return {}
 }
 
-export async function updateAppointmentStatusAction(id: string, status: string, notes?: string): Promise<void> {
+export async function updateAppointmentStatusAction(id: string, status: string, notes?: string): Promise<{ error?: string }> {
   const supabase = createServerClient()
   const qb = supabase.from('appointments') as any
   const payload: Record<string, unknown> = { status }
   if (notes !== undefined) payload.notes = notes
   const { error } = await qb.update(payload).eq('id', id)
-  if (error) throw new Error(error.message)
+  if (error) return { error: error.message }
   revalidatePath('/appointments')
   revalidatePath('/dashboard')
   revalidatePath('/planning')
+  return {}
 }

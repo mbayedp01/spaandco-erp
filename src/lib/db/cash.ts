@@ -25,13 +25,13 @@ export async function addCashTransaction(payload: {
   date?: string
   spa_id?: string
   created_by?: string | null
-}): Promise<CashTransaction> {
+}): Promise<{ data?: CashTransaction; error?: string }> {
   const supabase = createServerClient()
   const { data, error } = await supabase
     .from('cash_transactions')
     .insert({ ...payload, date: payload.date ?? new Date().toISOString().split('T')[0] } as any)
     .select()
     .single()
-  if (error) throw new Error(error.message)
-  return data as CashTransaction
+  if (error) return { error: error.message }
+  return { data: data as CashTransaction }
 }

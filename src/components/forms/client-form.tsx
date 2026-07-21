@@ -20,17 +20,12 @@ function ClientForm({ client, onClose }: { client?: Client; onClose: () => void 
     setError('')
     const fd = new FormData(e.currentTarget)
     startTransition(async () => {
-      try {
-        if (client) {
-          await updateClientAction(client.id, fd)
-        } else {
-          await createClientAction(fd)
-          ;(e.target as HTMLFormElement).reset()
-        }
-        onClose()
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Erreur')
-      }
+      const result = client
+        ? await updateClientAction(client.id, fd)
+        : await createClientAction(fd)
+      if (result.error) { setError(result.error); return }
+      if (!client) (e.target as HTMLFormElement).reset()
+      onClose()
     })
   }
 
@@ -104,7 +99,7 @@ export function DeleteClientButton({ id }: { id: string }) {
   const [pending, startTransition] = useTransition()
   function handleDelete() {
     if (!confirm('Supprimer ce client ?')) return
-    startTransition(() => deleteClientAction(id))
+    startTransition(async () => { await deleteClientAction(id) })
   }
   return (
     <button onClick={handleDelete} disabled={pending} className="rounded-md p-1.5 text-stone-400 hover:bg-rose-50 hover:text-rose-600 cursor-pointer transition-colors disabled:opacity-40" title="Supprimer">
