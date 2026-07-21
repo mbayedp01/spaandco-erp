@@ -1,11 +1,17 @@
 import { Header } from '@/components/layout/header'
 import { revenueByMonth, topServices, staffPerformance } from '@/lib/mock-data'
 import { RevenueAreaChart, ServicesPieChart, StaffBarChart } from '@/components/reports/charts'
-import { Download } from 'lucide-react'
+import { ExportReportPDFButton } from './pdf-button'
+import { getCurrentSpaId } from '@/lib/spa'
+import { createServerClient } from '@/lib/supabase/server'
 
 const PIE_COLORS = ['#0D9488', '#14B8A6', '#5EEAD4', '#F59E0B', '#CBD5E1']
 
-export default function ReportsPage() {
+export default async function ReportsPage() {
+  const spaId    = getCurrentSpaId()
+  const supabase = createServerClient()
+  const spaResult = await supabase.from('establishments').select('name').eq('id', spaId).single()
+  const spaName   = (spaResult.data as { name?: string } | null)?.name ?? 'Spa and Co'
   const lastMonth = revenueByMonth[revenueByMonth.length - 1]
   const prevMonth = revenueByMonth[revenueByMonth.length - 2]
   const caGrowth = Math.round(((lastMonth.ca - prevMonth.ca) / prevMonth.ca) * 100)
@@ -22,10 +28,17 @@ export default function ReportsPage() {
             <p className="text-sm text-stone-500">Période analysée</p>
             <p className="font-semibold text-slate-900">Juillet 2025 – Juin 2026</p>
           </div>
-          <button className="flex items-center gap-2 rounded-md border border-stone-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-stone-50 cursor-pointer">
-            <Download className="h-4 w-4" />
-            Exporter PDF
-          </button>
+          <ExportReportPDFButton
+            spaName={spaName}
+            period="Juillet 2025 – Juin 2026"
+            lastMonthCA={lastMonth.ca}
+            profit={profit}
+            margin={margin}
+            caGrowth={caGrowth}
+            topServices={topServices}
+            staffPerformance={staffPerformance}
+            monthlyData={revenueByMonth}
+          />
         </div>
 
         {/* KPIs */}

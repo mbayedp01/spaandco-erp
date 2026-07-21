@@ -1,17 +1,84 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useRef, useEffect } from 'react'
 import { Plus, Pencil, Trash2 } from 'lucide-react'
 import { Modal } from '@/components/ui/modal'
 import { createInventoryAction, updateInventoryAction, deleteInventoryAction } from '@/app/actions/inventory'
 import type { Database } from '@/lib/supabase/types'
 
 type InventoryItem = Database['public']['Tables']['inventory']['Row']
+export type SupplierItem = { id: string; name: string }
 
 const inputCls = 'w-full rounded-md border border-stone-200 px-3 py-2 text-sm text-slate-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-primary-500'
 const labelCls = 'block text-xs font-medium text-stone-600 mb-1'
 
-function InventoryForm({ item, onClose }: { item?: InventoryItem; onClose: () => void }) {
+function SupplierCombobox({ suppliers, defaultValue }: { suppliers: SupplierItem[]; defaultValue?: string }) {
+  const [value, setValue]   = useState(defaultValue ?? '')
+  const [open, setOpen]     = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const filtered = value.length >= 1
+    ? suppliers.filter(s => s.name.toLowerCase().includes(value.toLowerCase())).slice(0, 7)
+    : suppliers.slice(0, 7)
+
+  if (suppliers.length === 0) {
+    return (
+      <input
+        name="supplier"
+        value={value}
+        onChange={e => setValue(e.target.value)}
+        className={inputCls}
+        placeholder="Nom du fournisseur"
+      />
+    )
+  }
+
+  return (
+    <div ref={ref} className="relative">
+      <input
+        name="supplier"
+        type="text"
+        value={value}
+        onChange={e => { setValue(e.target.value); setOpen(true) }}
+        onFocus={() => setOpen(true)}
+        className={inputCls}
+        placeholder="Rechercher un fournisseur…"
+        autoComplete="off"
+      />
+      {open && (
+        <ul className="absolute z-50 mt-1 max-h-48 w-full overflow-auto rounded-md border border-stone-200 bg-white py-1 shadow-lg">
+          {filtered.length > 0 ? (
+            filtered.map(s => (
+              <li key={s.id}>
+                <button
+                  type="button"
+                  onMouseDown={() => { setValue(s.name); setOpen(false) }}
+                  className="w-full px-3 py-2 text-left text-sm text-slate-900 hover:bg-primary-50 hover:text-primary-700"
+                >
+                  {s.name}
+                </button>
+              </li>
+            ))
+          ) : (
+            <li className="px-3 py-2 text-xs text-stone-400">
+              Nouveau fournisseur : <span className="font-medium text-slate-700">«{value}»</span>
+            </li>
+          )}
+        </ul>
+      )}
+    </div>
+  )
+}
+
+function InventoryForm({ item, suppliers, onClose }: { item?: InventoryItem; suppliers: SupplierItem[]; onClose: () => void }) {
   const [error, setError] = useState('')
   const [pending, startTransition] = useTransition()
 
@@ -68,7 +135,7 @@ function InventoryForm({ item, onClose }: { item?: InventoryItem; onClose: () =>
       </div>
       <div>
         <label className={labelCls}>Fournisseur</label>
-        <input name="supplier" defaultValue={item?.supplier ?? ''} className={inputCls} placeholder="NaturaBio SN" />
+        <SupplierCombobox suppliers={suppliers} defaultValue={item?.supplier ?? ''} />
       </div>
       {error && <p className="rounded-md bg-rose-50 px-3 py-2 text-xs text-rose-600">{error}</p>}
       <div className="flex gap-2 pt-1">
@@ -83,7 +150,7 @@ function InventoryForm({ item, onClose }: { item?: InventoryItem; onClose: () =>
   )
 }
 
-export function AddInventoryButton() {
+export function AddInventoryButton({ suppliers = [] }: { suppliers?: SupplierItem[] }) {
   const [open, setOpen] = useState(false)
   return (
     <>
@@ -92,13 +159,13 @@ export function AddInventoryButton() {
         Ajouter
       </button>
       <Modal open={open} onClose={() => setOpen(false)} title="Nouveau produit">
-        <InventoryForm onClose={() => setOpen(false)} />
+        <InventoryForm suppliers={suppliers} onClose={() => setOpen(false)} />
       </Modal>
     </>
   )
 }
 
-export function EditInventoryButton({ item }: { item: InventoryItem }) {
+export function EditInventoryButton({ item, suppliers = [] }: { item: InventoryItem; suppliers?: SupplierItem[] }) {
   const [open, setOpen] = useState(false)
   return (
     <>
@@ -106,7 +173,7 @@ export function EditInventoryButton({ item }: { item: InventoryItem }) {
         <Pencil className="h-3.5 w-3.5" />
       </button>
       <Modal open={open} onClose={() => setOpen(false)} title="Modifier le produit">
-        <InventoryForm item={item} onClose={() => setOpen(false)} />
+        <InventoryForm item={item} suppliers={suppliers} onClose={() => setOpen(false)} />
       </Modal>
     </>
   )

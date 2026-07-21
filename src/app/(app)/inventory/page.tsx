@@ -1,5 +1,6 @@
 import { Header } from '@/components/layout/header'
 import { getInventory } from '@/lib/db/inventory'
+import { getSuppliers } from '@/lib/db/suppliers'
 import { getCurrentSpaId } from '@/lib/spa'
 import { cn } from '@/lib/utils'
 import { AlertTriangle, Package } from 'lucide-react'
@@ -16,7 +17,11 @@ const categoryColor: Record<string, string> = {
 
 export default async function InventoryPage() {
   const spaId = getCurrentSpaId()
-  const items = await getInventory(spaId)
+  const [items, suppliers] = await Promise.all([
+    getInventory(spaId),
+    getSuppliers(spaId),
+  ])
+  const supplierItems = suppliers.map(s => ({ id: s.id, name: s.name }))
   const low   = items.filter((i) => i.quantity < i.min_quantity)
   const ok    = items.filter((i) => i.quantity >= i.min_quantity)
   const totalValue = items.reduce((s, i) => s + i.quantity * (i.unit_price ?? 0), 0)
@@ -54,7 +59,7 @@ export default async function InventoryPage() {
         <div className="rounded-lg border border-stone-200 bg-white shadow-xs">
           <div className="flex items-center justify-between border-b border-stone-200 px-4 py-3 sm:px-5 sm:py-4">
             <h2 className="font-semibold text-slate-900">Articles ({items.length})</h2>
-            <AddInventoryButton />
+            <AddInventoryButton suppliers={supplierItems} />
           </div>
 
           {/* Mobile: card list */}
@@ -137,7 +142,7 @@ export default async function InventoryPage() {
                       </td>
                       <td className="px-3 py-3.5">
                         <div className="flex items-center gap-0.5">
-                          <EditInventoryButton item={item} />
+                          <EditInventoryButton item={item} suppliers={supplierItems} />
                           <DeleteInventoryButton id={item.id} />
                         </div>
                       </td>
