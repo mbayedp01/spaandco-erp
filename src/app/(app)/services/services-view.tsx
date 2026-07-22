@@ -15,10 +15,10 @@ const categoryColors: Record<string, string> = {
   'Soins corps':  'text-emerald-600 bg-emerald-50',
   Beauté:         'text-purple-600 bg-purple-50',
   Coiffure:       'text-amber-600 bg-amber-50',
-  Forfaits:       'text-rose-600 bg-rose-50',
+  Formules:       'text-rose-600 bg-rose-50',
 }
 
-const ALL_CATEGORIES = ['Tous', 'Massages', 'Soins visage', 'Soins corps', 'Beauté', 'Coiffure', 'Forfaits']
+const ALL_CATEGORIES = ['Tous', 'Massages', 'Soins visage', 'Soins corps', 'Beauté', 'Coiffure', 'Formules']
 
 function DeleteServiceButton({ id }: { id: string }) {
   const [pending, startTransition] = useTransition()

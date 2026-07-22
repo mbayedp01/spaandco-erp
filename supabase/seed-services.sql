@@ -92,17 +92,17 @@ INSERT INTO services (name, category, description, duration, price, active, spa_
 ('Forfait Minceur',                       'Soins corps', 'Programme complet minceur : drainage lymphatique + enveloppement + massage.',                                                                            60,  65000, true, NULL),
 
 -- ── OFFRES SIMPLES ──────────────────────────────────────────
-('Évasion Détente',                       'Forfaits', 'Hammam détente + Massage relaxant.',                                                                                                                       120,  75000, true, NULL),
-('Douceur & Relaxation',                  'Forfaits', 'Hammam détente + Gommage au savon noir + Massage relaxant + Soin du visage express.',                                                                     210, 115000, true, NULL),
-('Silhouette & Bien Être',                'Forfaits', 'Hammam détente + Gommage + Enveloppement + Massage + Pédicure Manucure.',                                                                                 270, 145000, true, NULL),
-('Beauté & Harmonie',                     'Forfaits', 'Hammam détente + Gommage + Massage relaxant + Pédicure Manucure simple.',                                                                                  210, 100000, true, NULL),
-('Rituel Impérial',                       'Forfaits', 'Hammam détente + Gommage + Enveloppement + Massage au choix + Soin visage + Manucure & Pédicure.',                                                       300, 150000, true, NULL),
+('Évasion Détente',                       'Formules', 'Hammam détente + Massage relaxant.',                                                                                                                       120,  75000, true, NULL),
+('Douceur & Relaxation',                  'Formules', 'Hammam détente + Gommage au savon noir + Massage relaxant + Soin du visage express.',                                                                     210, 115000, true, NULL),
+('Silhouette & Bien Être',                'Formules', 'Hammam détente + Gommage + Enveloppement + Massage + Pédicure Manucure.',                                                                                 270, 145000, true, NULL),
+('Beauté & Harmonie',                     'Formules', 'Hammam détente + Gommage + Massage relaxant + Pédicure Manucure simple.',                                                                                  210, 100000, true, NULL),
+('Rituel Impérial',                       'Formules', 'Hammam détente + Gommage + Enveloppement + Massage au choix + Soin visage + Manucure & Pédicure.',                                                       300, 150000, true, NULL),
 
 -- ── OFFRES COUPLE ───────────────────────────────────────────
-('Bulle de Détente Duo',                  'Forfaits', 'Hammam + Gommage + Massage relaxant en duo. (pour 2 personnes)',                                                                                           120, 150000, true, NULL),
-('Parenthèse Romantique Duo',             'Forfaits', 'Hammam détente + Gommage au savon noir + Massage relaxant en duo + Soin du visage express. (pour 2 personnes)',                                           240, 230000, true, NULL),
-('Évasion à Deux',                        'Forfaits', 'Hammam + Gommage + Massage relaxant en duo + Enveloppement. (pour 2 personnes)',                                                                          360, 250000, true, NULL),
-('Harmonie & Bien Être Duo',              'Forfaits', 'Hammam + Gommage + Massage relaxant en duo + Pédicure & Manucure simple. (pour 2 personnes)',                                                             180, 190000, true, NULL),
+('Bulle de Détente Duo',                  'Formules', 'Hammam + Gommage + Massage relaxant en duo. (pour 2 personnes)',                                                                                           120, 150000, true, NULL),
+('Parenthèse Romantique Duo',             'Formules', 'Hammam détente + Gommage au savon noir + Massage relaxant en duo + Soin du visage express. (pour 2 personnes)',                                           240, 230000, true, NULL),
+('Évasion à Deux',                        'Formules', 'Hammam + Gommage + Massage relaxant en duo + Enveloppement. (pour 2 personnes)',                                                                          360, 250000, true, NULL),
+('Harmonie & Bien Être Duo',              'Formules', 'Hammam + Gommage + Massage relaxant en duo + Pédicure & Manucure simple. (pour 2 personnes)',                                                             180, 190000, true, NULL),
 
 -- ── COIFFURE ────────────────────────────────────────────────
 ('Brushing',                              'Coiffure', 'Mise en forme et séchage des cheveux pour un résultat lisse et soyeux.',                                                                                    60,   8000, true, NULL),
