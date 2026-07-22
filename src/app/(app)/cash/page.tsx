@@ -2,6 +2,8 @@ import { Header } from '@/components/layout/header'
 import { getCashTransactions } from '@/lib/db/cash'
 import { getEstablishments } from '@/lib/db/establishments'
 import { getClients } from '@/lib/db/clients'
+import { getServices } from '@/lib/db/services'
+import { getInventory } from '@/lib/db/inventory'
 import { getCurrentSpaId } from '@/lib/spa'
 import { cn } from '@/lib/utils'
 import { TrendingUp, TrendingDown, Wallet } from 'lucide-react'
@@ -60,12 +62,16 @@ export default async function CashPage({
   const type     = params.type     ?? 'all'
   const caissier = params.caissier ?? 'all'
 
-  const [allTransactions, allEstablishments, allClients] = await Promise.all([
+  const [allTransactions, allEstablishments, allClients, allServices, allInventory] = await Promise.all([
     getCashTransactions(spaId),
     getEstablishments(),
     getClients(spaId),
+    getServices(),
+    getInventory(spaId),
   ])
   const clients = allClients.map(c => ({ id: c.id, first_name: c.first_name, last_name: c.last_name, phone: c.phone }))
+  const services = allServices.filter(s => s.active).map(s => ({ id: s.id, name: s.name, category: s.category, price: s.price ? Number(s.price) : null, duration: s.duration }))
+  const products = allInventory.filter(i => i.unit_price != null).map(i => ({ id: i.id, name: i.name, unit_price: Number(i.unit_price), unit: i.unit, quantity: i.quantity }))
 
   const transactions = applyFilters(allTransactions, period, type, caissier)
 
@@ -133,7 +139,7 @@ export default async function CashPage({
                 </span>
               )}
             </h2>
-            <AddTransactionButton clients={clients} />
+            <AddTransactionButton clients={clients} services={services} products={products} establishment={establishment} />
           </div>
 
           {/* Filtres */}

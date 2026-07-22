@@ -24,7 +24,7 @@ export function Modal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={e => { if (e.target === e.currentTarget) onClose() }} />
       <div className="relative w-full max-w-md rounded-t-2xl bg-white shadow-2xl sm:rounded-xl flex flex-col max-h-[92vh]">
         {/* Drag handle on mobile */}
         <div className="flex justify-center pt-2 pb-0 sm:hidden">
