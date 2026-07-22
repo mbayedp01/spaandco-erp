@@ -27,13 +27,13 @@ export interface NavItem {
 }
 
 export const navItems: NavItem[] = [
-  { label: 'Tableau de bord', href: '/dashboard',     icon: LayoutDashboard, section: 'Opérations', roles: ['admin', 'caissier', 'medecin'] },
-  { label: 'Clients',         href: '/clients',        icon: Users,                                  roles: ['admin', 'caissier', 'medecin'] },
-  { label: 'Abonnements',     href: '/subscriptions',  icon: BadgeCheck,                             roles: ['admin', 'caissier', 'medecin'] },
-  { label: 'Rendez-vous',     href: '/appointments',   icon: CalendarDays,                           roles: ['admin', 'caissier', 'medecin'] },
-  { label: 'Prestations',     href: '/services',       icon: Sparkles,                               roles: ['admin', 'medecin'] },
+  { label: 'Tableau de bord', href: '/dashboard',     icon: LayoutDashboard, section: 'Opérations', roles: ['admin', 'caissier'] },
+  { label: 'Clients',         href: '/clients',        icon: Users,                                  roles: ['admin', 'caissier'] },
+  { label: 'Abonnements',     href: '/subscriptions',  icon: BadgeCheck,                             roles: ['admin', 'caissier'] },
+  { label: 'Rendez-vous',     href: '/appointments',   icon: CalendarDays,                           roles: ['admin', 'caissier'] },
+  { label: 'Prestations',     href: '/services',       icon: Sparkles,                               roles: ['admin', 'caissier'] },
   { label: 'Personnel',       href: '/staff',          icon: UserCheck,       section: 'Équipe & Stock', roles: ['admin'] },
-  { label: 'Planning',        href: '/planning',       icon: CalendarCheck,                          roles: ['admin', 'medecin'] },
+  { label: 'Planning',        href: '/planning',       icon: CalendarCheck,                          roles: ['admin'] },
   { label: 'Stocks',          href: '/inventory',      icon: Package,                                roles: ['admin', 'caissier'] },
   { label: 'Fournisseurs',    href: '/suppliers',      icon: Truck,                                  roles: ['admin'] },
   { label: 'Caisse',          href: '/cash',           icon: CreditCard,      section: 'Finance',   roles: ['admin', 'caissier'] },

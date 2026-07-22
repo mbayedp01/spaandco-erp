@@ -1,29 +1,25 @@
-export type UserRole = 'admin' | 'caissier' | 'medecin'
+export type UserRole = 'admin' | 'caissier'
 
 export const ROLE_LABELS: Record<UserRole, string> = {
   admin:    'Administrateur',
   caissier: 'Caissier',
-  medecin:  'Thérapeute',
 }
 
 export const ROLE_COLORS: Record<UserRole, string> = {
   admin:    'bg-primary-100 text-primary-700',
   caissier: 'bg-emerald-100 text-emerald-700',
-  medecin:  'bg-blue-100 text-blue-700',
 }
 
-// Routes accessible par rôle (sans le préfixe /)
+// Routes accessibles par rôle (sans le préfixe /)
 const ROLE_ROUTES: Record<UserRole, string[]> = {
   admin: [
     'dashboard', 'clients', 'subscriptions', 'appointments', 'services',
     'staff', 'planning', 'inventory', 'suppliers',
-    'cash', 'accounting', 'marketing', 'reports', 'settings',
+    'cash', 'accounting', 'marketing', 'reports', 'settings', 'users',
   ],
   caissier: [
-    'dashboard', 'clients', 'subscriptions', 'appointments', 'cash', 'inventory',
-  ],
-  medecin: [
-    'dashboard', 'clients', 'subscriptions', 'appointments', 'services', 'planning',
+    'dashboard', 'clients', 'subscriptions', 'appointments', 'services',
+    'cash', 'inventory',
   ],
 }
 

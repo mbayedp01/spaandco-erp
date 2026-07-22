@@ -4,11 +4,10 @@ import { getStaff } from '@/lib/db/staff'
 import { getAppointments } from '@/lib/db/appointments'
 import { getClients } from '@/lib/db/clients'
 import { getCurrentSpaId } from '@/lib/spa'
-import { getCurrentUserRole, getCurrentUserName } from '@/lib/user-role'
+import { getCurrentUserRole } from '@/lib/user-role'
 import type { Database } from '@/lib/supabase/types'
 import { cn } from '@/lib/utils'
 import { getServices } from '@/lib/db/services'
-import { MedecinAppointmentActions } from '../appointments/medecin-actions'
 import { AddAppointmentButton } from '@/components/forms/appointment-form'
 import { ChevronLeft, ChevronRight, CalendarDays, UserCheck, Clock, Users } from 'lucide-react'
 
@@ -51,100 +50,6 @@ async function getWeekAppointments(
   const { data, error } = await q
   if (error) console.error('getWeekAppointments:', error.message)
   return (data as Appointment[] | null) ?? []
-}
-
-// ─── Vue Thérapeute ───────────────────────────────────────────────────────────
-
-function MedecinView({
-  appointments, weekDays, todayIndex, weekLabel,
-}: {
-  appointments: Appointment[]
-  weekDays: ReturnType<typeof getWeekDates>
-  todayIndex: number
-  weekLabel: string
-}) {
-  const today       = weekDays[todayIndex]?.iso ?? new Date().toISOString().split('T')[0]
-  const todayAppts  = appointments.filter(a => a.date === today && a.status !== 'cancelled')
-  const upcoming    = appointments.filter(a => a.date > today && a.status !== 'cancelled').slice(0, 15)
-
-  return (
-    <div className="flex-1 overflow-y-auto p-4 sm:p-6">
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-stone-400">Semaine du <span className="font-medium text-slate-700">{weekLabel}</span></p>
-        <div className="flex items-center gap-3">
-          <div className="rounded-xl bg-primary-50 px-4 py-2 text-center">
-            <p className="text-xl font-bold text-primary-700">{todayAppts.length}</p>
-            <p className="text-xs text-stone-400">Aujourd&apos;hui</p>
-          </div>
-          <div className="rounded-xl bg-stone-50 px-4 py-2 text-center">
-            <p className="text-xl font-bold text-slate-700">{upcoming.length}</p>
-            <p className="text-xs text-stone-400">À venir</p>
-          </div>
-        </div>
-      </div>
-
-      <h2 className="mb-3 font-semibold text-slate-900">
-        Mes soins d&apos;aujourd&apos;hui
-        <span className="ml-2 text-sm font-normal text-stone-400">({todayAppts.length})</span>
-      </h2>
-
-      {todayAppts.length === 0 ? (
-        <div className="mb-8 flex flex-col items-center justify-center rounded-xl border border-dashed border-stone-200 bg-white py-14">
-          <CalendarDays className="mb-2 h-9 w-9 text-stone-300" />
-          <p className="text-sm text-stone-400">Aucun soin prévu aujourd&apos;hui</p>
-        </div>
-      ) : (
-        <div className="mb-8 space-y-3">
-          {todayAppts.map((a) => (
-            <div key={a.id} className="flex flex-wrap items-start gap-4 rounded-xl border border-stone-200 bg-white p-4 shadow-xs">
-              <div className="flex w-16 shrink-0 flex-col items-center rounded-lg bg-primary-50 py-2">
-                <span className="text-base font-bold text-primary-700">{a.time ?? '—'}</span>
-                <span className="text-xs text-stone-400">{a.duration ?? '—'} min</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-slate-900">{a.client_name ?? '—'}</p>
-                <p className="text-sm text-stone-500">{a.service_name ?? 'Soin non spécifié'}</p>
-                {a.notes && (
-                  <p className="mt-1.5 rounded-lg bg-amber-50 px-3 py-1.5 text-xs text-amber-700 italic">
-                    📝 {a.notes}
-                  </p>
-                )}
-              </div>
-              <div className="flex flex-col items-end gap-2 shrink-0">
-                <span className={cn('rounded-full px-2.5 py-0.5 text-xs font-medium', statusStyle[a.status] ?? statusStyle.pending)}>
-                  {statusLabel[a.status] ?? a.status}
-                </span>
-                <MedecinAppointmentActions id={a.id} currentStatus={a.status} />
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {upcoming.length > 0 && (
-        <>
-          <h2 className="mb-3 font-semibold text-slate-900">Prochains rendez-vous</h2>
-          <div className="rounded-xl border border-stone-200 bg-white shadow-xs divide-y divide-stone-100">
-            {upcoming.map((a) => (
-              <div key={a.id} className="flex items-center gap-4 px-5 py-3">
-                <div className="w-28 shrink-0">
-                  <p className="text-xs font-medium text-slate-700">{a.date}</p>
-                  <p className="text-xs text-stone-400">{a.time ?? '—'}</p>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-slate-900 truncate">{a.client_name ?? '—'}</p>
-                  <p className="text-xs text-stone-400 truncate">{a.service_name ?? '—'}</p>
-                </div>
-                <span className={cn('shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium', statusStyle[a.status] ?? statusStyle.pending)}>
-                  {statusLabel[a.status] ?? a.status}
-                </span>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
-    </div>
-  )
 }
 
 // ─── Vue Caissier / Admin ─────────────────────────────────────────────────────
@@ -335,9 +240,8 @@ function AdminCaissierView({
 
 export default async function PlanningPage() {
   const spaId = getCurrentSpaId()
-  const [userRole, userName, staffList, services, clients] = await Promise.all([
+  const [userRole, staffList, services, clients] = await Promise.all([
     getCurrentUserRole(),
-    getCurrentUserName(),
     getStaff(spaId),
     getServices(spaId),
     getClients(spaId),
@@ -352,7 +256,7 @@ export default async function PlanningPage() {
     return `${s.getDate()} – ${e.getDate()} ${e.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}`
   })()
 
-  const staffNameFilter  = userRole === 'medecin' ? userName : null
+  const staffNameFilter  = null
   const [weekAppointments, allAppointments] = await Promise.all([
     getWeekAppointments(weekDays[0].iso, weekDays[5].iso, spaId, staffNameFilter),
     getAppointments(spaId),
@@ -372,35 +276,22 @@ export default async function PlanningPage() {
     date: a.date, time: a.time, staff_name: a.staff_name ?? null, duration: (a as any).duration ?? null,
   }))
 
-  const title = userRole === 'medecin'
-    ? `Mes rendez-vous${userName ? ` — ${userName}` : ''}`
-    : 'Planning'
-
   return (
     <>
-      <Header title={title} />
-      {userRole === 'medecin' ? (
-        <MedecinView
-          appointments={weekAppointments}
-          weekDays={weekDays}
-          todayIndex={todayIndex}
-          weekLabel={weekLabel}
-        />
-      ) : (
-        <AdminCaissierView
-          appointments={weekAppointments}
-          staff={staffList}
-          staffNames={staffNames}
-          serviceNames={serviceNames}
-          weekDays={weekDays}
-          todayIndex={todayIndex}
-          weekLabel={weekLabel}
-          showCA={userRole === 'admin'}
-          clientItems={clientItems}
-          serviceItems={serviceItems}
-          existingAppts={existingAppts}
-        />
-      )}
+      <Header title="Planning" />
+      <AdminCaissierView
+        appointments={weekAppointments}
+        staff={staffList}
+        staffNames={staffNames}
+        serviceNames={serviceNames}
+        weekDays={weekDays}
+        todayIndex={todayIndex}
+        weekLabel={weekLabel}
+        showCA={userRole === 'admin'}
+        clientItems={clientItems}
+        serviceItems={serviceItems}
+        existingAppts={existingAppts}
+      />
     </>
   )
 }

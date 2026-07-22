@@ -4,11 +4,10 @@ import { getStaff } from '@/lib/db/staff'
 import { getServices } from '@/lib/db/services'
 import { getClients } from '@/lib/db/clients'
 import { getCurrentSpaId } from '@/lib/spa'
-import { getCurrentUserRole, getCurrentUserName } from '@/lib/user-role'
+import { getCurrentUserRole } from '@/lib/user-role'
 import { cn } from '@/lib/utils'
 import { AddAppointmentButton } from '@/components/forms/appointment-form'
 import { AppointmentStatusButtons } from './appointment-status-buttons'
-import { MedecinAppointmentActions } from './medecin-actions'
 import { CalendarDays } from 'lucide-react'
 
 const statusStyle: Record<string, string> = {
@@ -23,18 +22,15 @@ const statusLabel: Record<string, string> = {
 
 export default async function AppointmentsPage() {
   const spaId = getCurrentSpaId()
-  const [userRole, userName, staffList, services, clients] = await Promise.all([
+  const [userRole, staffList, services, clients] = await Promise.all([
     getCurrentUserRole(),
-    getCurrentUserName(),
     getStaff(spaId),
     getServices(spaId),
     getClients(spaId),
   ])
 
   const allAppointments = await getAppointments(spaId)
-  const appointments = userRole === 'medecin' && userName
-    ? allAppointments.filter(a => a.staff_name === userName)
-    : allAppointments
+  const appointments    = allAppointments
 
   const today      = new Date().toISOString().split('T')[0]
   const todayAppts = appointments.filter(a => a.date === today)
@@ -68,11 +64,9 @@ export default async function AppointmentsPage() {
     completed: appointments.filter(a => a.status === 'completed').length,
   }
 
-  const isMedecin = userRole === 'medecin'
-
   return (
     <>
-      <Header title={isMedecin ? 'Mes soins' : 'Rendez-vous'} />
+      <Header title="Rendez-vous" />
       <div className="flex-1 overflow-y-auto p-4 sm:p-6">
 
         {/* KPIs */}
@@ -93,17 +87,15 @@ export default async function AppointmentsPage() {
         {/* Header + bouton */}
         <div className="mb-4 flex items-center justify-between">
           <h2 className="font-semibold text-slate-900">
-            {isMedecin ? "Mes soins d'aujourd'hui" : "Aujourd'hui"}
+            {"Aujourd'hui"}
             <span className="ml-2 text-sm font-normal text-stone-400">({todayAppts.length} RDV)</span>
           </h2>
-          {!isMedecin && (
-            <AddAppointmentButton
-              staffNames={staffNames}
-              clients={clientItems}
-              services={serviceItems}
-              existingAppointments={existingAppts}
-            />
-          )}
+          <AddAppointmentButton
+            staffNames={staffNames}
+            clients={clientItems}
+            services={serviceItems}
+            existingAppointments={existingAppts}
+          />
         </div>
 
         {/* RDV du jour */}
@@ -123,7 +115,7 @@ export default async function AppointmentsPage() {
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-slate-900">{a.client_name}</p>
                   <p className="text-sm text-stone-500">{a.service_name}</p>
-                  {!isMedecin && a.staff_name && (
+                  {a.staff_name && (
                     <p className="text-xs text-stone-400">Thérapeute : {a.staff_name}</p>
                   )}
                   {a.notes && (
@@ -133,16 +125,11 @@ export default async function AppointmentsPage() {
                   )}
                 </div>
                 <div className="flex flex-col items-end gap-2 shrink-0">
-                  {!isMedecin && (
-                    <p className="font-semibold text-slate-900">{(a.price ?? 0).toLocaleString('fr-FR')} F</p>
-                  )}
+                  <p className="font-semibold text-slate-900">{(a.price ?? 0).toLocaleString('fr-FR')} F</p>
                   <span className={cn('rounded-full px-2.5 py-0.5 text-xs font-medium', statusStyle[a.status] ?? statusStyle.pending)}>
                     {statusLabel[a.status] ?? a.status}
                   </span>
-                  {isMedecin
-                    ? <MedecinAppointmentActions id={a.id} currentStatus={a.status} />
-                    : <AppointmentStatusButtons id={a.id} currentStatus={a.status} />
-                  }
+                  <AppointmentStatusButtons id={a.id} currentStatus={a.status} />
                 </div>
               </div>
             ))}
@@ -162,7 +149,7 @@ export default async function AppointmentsPage() {
                     <p className="font-medium text-slate-900 truncate">{a.client_name}</p>
                     <p className="text-xs text-stone-400 truncate">{a.service_name ?? '—'}</p>
                   </div>
-                  {!isMedecin && a.staff_name && (
+                  {a.staff_name && (
                     <span className="hidden text-xs text-stone-400 sm:inline truncate max-w-[120px]">{a.staff_name}</span>
                   )}
                   <span className={cn('hidden shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium sm:inline', statusStyle[a.status] ?? statusStyle.pending)}>

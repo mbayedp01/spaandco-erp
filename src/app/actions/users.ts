@@ -40,12 +40,16 @@ export async function createUserAction(
   name: string,
   role: string,
   password: string,
+  spa_id?: string,
 ): Promise<{ error?: string }> {
   await requireAdmin()
 
   // Admin API via fetch brut (compatible nouveau format de clé Supabase sb_secret_...)
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
   const serviceKey  = process.env.SUPABASE_SERVICE_ROLE_KEY!
+
+  const userMeta: Record<string, string> = { name, role }
+  if (spa_id) userMeta.spa_id = spa_id
 
   const resp = await fetch(`${supabaseUrl}/auth/v1/admin/users`, {
     method: 'POST',
@@ -58,7 +62,7 @@ export async function createUserAction(
       email,
       password,
       email_confirm: true,
-      user_metadata: { name, role },
+      user_metadata: userMeta,
     }),
   })
 

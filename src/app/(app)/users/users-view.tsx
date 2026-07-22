@@ -9,7 +9,6 @@ import type { UserProfile } from '@/lib/db/users'
 const ROLE_OPTIONS = [
   { value: 'admin',    label: 'Administrateur', color: 'bg-primary-50 text-primary-700' },
   { value: 'caissier', label: 'Caissier',       color: 'bg-emerald-50 text-emerald-700' },
-  { value: 'medecin',  label: 'Thérapeute',     color: 'bg-blue-50 text-blue-700' },
 ]
 
 const inputCls = 'w-full rounded-md border border-stone-200 px-3 py-2 text-sm text-slate-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-primary-500'
@@ -22,10 +21,12 @@ function getRoleLabel(role: string) {
   return ROLE_OPTIONS.find(r => r.value === role)?.label ?? role
 }
 
+type Establishment = { id: string; name: string; city: string }
+
 // ── Create modal ────────────────────────────────────────────────────────────────
 
-function CreateModal({ onClose }: { onClose: () => void }) {
-  const [form, setForm] = useState({ name: '', email: '', role: 'medecin', password: '' })
+function CreateModal({ onClose, establishments }: { onClose: () => void; establishments: Establishment[] }) {
+  const [form, setForm] = useState({ name: '', email: '', role: 'caissier', password: '', spa_id: establishments[0]?.id ?? '' })
   const [showPwd, setShowPwd] = useState(false)
   const [error, setError] = useState('')
   const [pending, start] = useTransition()
@@ -35,9 +36,11 @@ function CreateModal({ onClose }: { onClose: () => void }) {
     setError('')
     if (!form.name || !form.email || !form.password) { setError('Tous les champs sont requis'); return }
     if (form.password.length < 6) { setError('Mot de passe : 6 caractères minimum'); return }
+    if (form.role === 'caissier' && !form.spa_id) { setError('Sélectionnez un établissement'); return }
     start(async () => {
       try {
-        const res = await createUserAction(form.email, form.name, form.role, form.password)
+        const spa_id = form.role === 'caissier' ? form.spa_id : undefined
+        const res = await createUserAction(form.email, form.name, form.role, form.password, spa_id)
         if (res.error) { setError(res.error); return }
         onClose()
       } catch (e: unknown) {
@@ -68,6 +71,16 @@ function CreateModal({ onClose }: { onClose: () => void }) {
               {ROLE_OPTIONS.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
             </select>
           </div>
+          {form.role === 'caissier' && (
+            <div>
+              <label className={labelCls}>Établissement *</label>
+              <select value={form.spa_id} onChange={e => setForm(p => ({ ...p, spa_id: e.target.value }))} className={inputCls}>
+                {establishments.map(e => (
+                  <option key={e.id} value={e.id}>{e.name} — {e.city}</option>
+                ))}
+              </select>
+            </div>
+          )}
           <div>
             <label className={labelCls}>Mot de passe temporaire *</label>
             <div className="relative">
@@ -140,15 +153,15 @@ function EditModal({ user, onClose }: { user: UserProfile; onClose: () => void }
 
 // ── Main view ───────────────────────────────────────────────────────────────────
 
-export function UsersView({ users: initial }: { users: UserProfile[] }) {
-  const [users, setUsers] = useState(initial)
+export function UsersView({ users: initial, establishments }: { users: UserProfile[]; establishments: Establishment[] }) {
+  const [users, setUsers]       = useState(initial)
   const [showCreate, setShowCreate] = useState(false)
   const [editUser, setEditUser]     = useState<UserProfile | null>(null)
   const [pending, start]            = useTransition()
 
-  const actifs    = users.filter(u => u.status === 'actif').length
-  const admins    = users.filter(u => u.role === 'admin').length
-  const therapists= users.filter(u => u.role === 'medecin').length
+  const actifs   = users.filter(u => u.status === 'actif').length
+  const admins   = users.filter(u => u.role === 'admin').length
+  const caissiers= users.filter(u => u.role === 'caissier').length
 
   function handleDelete(userId: string, name: string) {
     if (!confirm(`Désactiver le compte de ${name} ?`)) return
@@ -160,7 +173,6 @@ export function UsersView({ users: initial }: { users: UserProfile[] }) {
 
   function closeCreate() {
     setShowCreate(false)
-    setUsers(initial)
     window.location.reload()
   }
 
@@ -171,16 +183,16 @@ export function UsersView({ users: initial }: { users: UserProfile[] }) {
 
   return (
     <div className="flex-1 overflow-y-auto p-4 sm:p-6">
-      {showCreate && <CreateModal onClose={closeCreate} />}
+      {showCreate && <CreateModal onClose={closeCreate} establishments={establishments} />}
       {editUser   && <EditModal user={editUser} onClose={closeEdit} />}
 
       {/* KPIs */}
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
         {[
-          { label: 'Total', value: users.length, color: 'text-slate-900' },
-          { label: 'Actifs', value: actifs, color: 'text-emerald-700' },
-          { label: 'Administrateurs', value: admins, color: 'text-primary-700' },
-          { label: 'Thérapeutes', value: therapists, color: 'text-blue-700' },
+          { label: 'Total',          value: users.length, color: 'text-slate-900' },
+          { label: 'Actifs',         value: actifs,       color: 'text-emerald-700' },
+          { label: 'Administrateurs',value: admins,       color: 'text-primary-700' },
+          { label: 'Caissiers',      value: caissiers,    color: 'text-emerald-700' },
         ].map(k => (
           <div key={k.label} className="rounded-lg border border-stone-200 bg-white p-4 shadow-xs sm:p-5">
             <p className="text-xs text-stone-500">{k.label}</p>
@@ -306,8 +318,7 @@ export function UsersView({ users: initial }: { users: UserProfile[] }) {
           <div className="flex flex-wrap gap-3">
             {[
               { role: 'admin',    desc: 'Accès complet à toutes les fonctionnalités' },
-              { role: 'caissier', desc: 'Caisse, stocks, rendez-vous' },
-              { role: 'medecin',  desc: 'Planning et rendez-vous uniquement' },
+              { role: 'caissier', desc: 'Caisse, stocks, prestations, RDV — restreint à son spa' },
             ].map(({ role, desc }) => (
               <div key={role} className="flex items-center gap-2">
                 <span className={cn('rounded-full px-2 py-0.5 text-xs font-medium', getRoleColor(role))}>

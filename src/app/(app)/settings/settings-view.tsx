@@ -560,13 +560,11 @@ function PaiementsSection({ settings, setSettings, onSave }: {
 const ROLE_BADGE: Record<string, string> = {
   admin:    'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300',
   caissier: 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300',
-  medecin:  'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300',
 }
 
 const ROLE_OPTIONS = [
   { value: 'admin',    label: 'Administrateur' },
   { value: 'caissier', label: 'Caissier'       },
-  { value: 'medecin',  label: 'Thérapeute'     },
 ]
 
 function UtilisateursSection({ users, isAdmin }: { users: UserProfile[]; isAdmin: boolean }) {
@@ -576,7 +574,7 @@ function UtilisateursSection({ users, isAdmin }: { users: UserProfile[]; isAdmin
   const { push } = useToasts()
 
   // Invite form state
-  const [inviteForm, setInviteForm] = useState({ email: '', name: '', role: 'medecin', password: '' })
+  const [inviteForm, setInviteForm] = useState({ email: '', name: '', role: 'caissier', password: '' })
 
   function handleInvite() {
     if (!inviteForm.email || !inviteForm.name || !inviteForm.password) {
@@ -586,7 +584,7 @@ function UtilisateursSection({ users, isAdmin }: { users: UserProfile[]; isAdmin
     startTransition(async () => {
       const res = await createUserAction(inviteForm.email, inviteForm.name, inviteForm.role, inviteForm.password)
       if (res.error) push('error', res.error)
-      else { push('success', 'Utilisateur créé'); setShowInvite(false); setInviteForm({ email: '', name: '', role: 'medecin', password: '' }) }
+      else { push('success', 'Utilisateur créé'); setShowInvite(false); setInviteForm({ email: '', name: '', role: 'caissier', password: '' }) }
     })
   }
 
@@ -777,11 +775,10 @@ function UtilisateursSection({ users, isAdmin }: { users: UserProfile[]; isAdmin
       <Card>
         <div className="px-5 py-4">
           <p className="text-sm font-semibold text-slate-900 dark:text-white mb-3">Rôles disponibles</p>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <div className="grid grid-cols-2 gap-2">
             {[
-              { role: 'admin',    label: 'Administrateur', desc: 'Accès complet'   },
-              { role: 'caissier', label: 'Caissier',       desc: 'Caisse, stock & RDV' },
-              { role: 'medecin',  label: 'Thérapeute',     desc: 'RDV & Planning'  },
+              { role: 'admin',    label: 'Administrateur', desc: 'Accès complet à toutes les fonctionnalités' },
+              { role: 'caissier', label: 'Caissier',       desc: 'Caisse, stocks, prestations, RDV — restreint à son spa' },
             ].map(({ role, label, desc }) => (
               <div key={role} className="flex items-start gap-2 rounded-lg border border-stone-200 dark:border-slate-600 p-3">
                 <span className={cn('mt-0.5 rounded-full px-2 py-0.5 text-xs font-medium', ROLE_BADGE[role] ?? 'bg-stone-100 text-stone-600')}>

@@ -34,7 +34,22 @@ export function Sidebar({ establishments, currentSpaId, userRole }: SidebarProps
       </div>
 
       <div className="border-b pb-1" style={{ borderColor: 'rgb(var(--sidebar-mid))' }}>
-        <SpaSwitcher establishments={establishments} currentSpaId={currentSpaId} />
+        {userRole === 'admin' ? (
+          <SpaSwitcher establishments={establishments} currentSpaId={currentSpaId} />
+        ) : (
+          /* Caissier : affiche son spa en lecture seule, sans switcher */
+          <div className="px-3 pb-3">
+            <div className="flex items-center gap-2.5 rounded-md bg-white/5 px-3 py-2.5">
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[11px] font-bold text-white bg-primary-600">
+                {(establishments[0]?.name[0] ?? '?')}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="truncate text-xs font-semibold text-white">{establishments[0]?.name ?? '—'}</p>
+                <p className="text-[10px] text-stone-500">{establishments[0]?.city ?? ''}</p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 py-3">
