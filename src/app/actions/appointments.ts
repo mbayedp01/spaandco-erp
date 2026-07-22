@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createServerClient } from '@/lib/supabase/server'
 import { getCurrentSpaId } from '@/lib/spa'
+import { logCurrentAction } from '@/lib/audit'
 
 export async function createAppointmentAction(formData: FormData): Promise<{ error?: string }> {
   const spaId        = getCurrentSpaId()
@@ -26,6 +27,7 @@ export async function createAppointmentAction(formData: FormData): Promise<{ err
   } as any)
 
   if (error) return { error: error.message }
+  await logCurrentAction({ action: 'created', entity_type: 'appointment', entity_name: `${client_name} · ${service_name || ''}`, spa_id: spaId })
   revalidatePath('/appointments')
   revalidatePath('/dashboard')
   revalidatePath('/planning')
@@ -39,6 +41,7 @@ export async function updateAppointmentStatusAction(id: string, status: string, 
   if (notes !== undefined) payload.notes = notes
   const { error } = await qb.update(payload).eq('id', id)
   if (error) return { error: error.message }
+  await logCurrentAction({ action: 'updated', entity_type: 'appointment', entity_name: `Statut → ${status}` })
   revalidatePath('/appointments')
   revalidatePath('/dashboard')
   revalidatePath('/planning')

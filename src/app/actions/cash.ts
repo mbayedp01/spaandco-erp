@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { addCashTransaction } from '@/lib/db/cash'
 import { createServerClient } from '@/lib/supabase/server'
 import { getCurrentSpaId } from '@/lib/spa'
+import { logCurrentAction } from '@/lib/audit'
 
 export async function addTransactionAction(formData: FormData): Promise<{ error?: string }> {
   const label          = String(formData.get('label')          ?? '').trim()
@@ -21,7 +22,9 @@ export async function addTransactionAction(formData: FormData): Promise<{ error?
 
   const result = await addCashTransaction({ label, category, amount, type, payment_method, created_by, spa_id })
   if (result.error) return { error: result.error }
+  await logCurrentAction({ action: 'created', entity_type: 'cash', entity_name: `${label} · ${amount.toLocaleString('fr-FR')} F`, spa_id })
   revalidatePath('/cash')
   revalidatePath('/accounting')
+  revalidatePath('/dashboard')
   return {}
 }

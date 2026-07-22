@@ -7,14 +7,14 @@ import { getCurrentUserRole } from '@/lib/user-role'
 import { getAppUsers } from '@/lib/db/users'
 
 export default async function SettingsPage() {
+  const currentSpaId = getCurrentSpaId()
+
   const [establishments, logs, role, users] = await Promise.all([
     getEstablishments(),
-    getRecentAuditLogs(50),
+    getRecentAuditLogs(100, currentSpaId),
     getCurrentUserRole(),
     getAppUsers(),
   ])
-
-  const currentSpaId = getCurrentSpaId()
   const current = establishments.find((e) => e.id === currentSpaId) ?? establishments[0] ?? null
 
   return (

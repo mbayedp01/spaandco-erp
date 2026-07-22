@@ -5,6 +5,7 @@ import { createServerClient } from '@/lib/supabase/server'
 import { getCurrentUserRole } from '@/lib/user-role'
 import { updateUserProfile } from '@/lib/db/users'
 import { createClient } from '@supabase/supabase-js'
+import { logCurrentAction } from '@/lib/audit'
 
 async function requireAdmin() {
   const role = await getCurrentUserRole()
@@ -18,6 +19,7 @@ export async function updateUserRoleAction(
   await requireAdmin()
   const result = await updateUserProfile(userId, { role })
   if (result.error) return { error: result.error }
+  await logCurrentAction({ action: 'updated', entity_type: 'user', entity_name: `Rôle → ${role}`, spa_id: null })
   revalidatePath('/settings')
   return {}
 }
@@ -67,6 +69,7 @@ export async function createUserAction(
     status: 'actif',
   })
 
+  await logCurrentAction({ action: 'created', entity_type: 'user', entity_name: `${name} (${role})`, spa_id: null })
   revalidatePath('/settings')
   return {}
 }

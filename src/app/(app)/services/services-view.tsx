@@ -10,13 +10,15 @@ import { deleteServiceAction } from '@/app/actions/services'
 type Service = Database['public']['Tables']['services']['Row']
 
 const categoryColors: Record<string, string> = {
-  Massages:      'text-primary-600 bg-primary-50',
-  'Soins visage':'text-pink-600 bg-pink-50',
-  'Soins corps': 'text-emerald-600 bg-emerald-50',
-  Beauté:        'text-purple-600 bg-purple-50',
+  Massages:       'text-primary-600 bg-primary-50',
+  'Soins visage': 'text-pink-600 bg-pink-50',
+  'Soins corps':  'text-emerald-600 bg-emerald-50',
+  Beauté:         'text-purple-600 bg-purple-50',
+  Coiffure:       'text-amber-600 bg-amber-50',
+  Forfaits:       'text-rose-600 bg-rose-50',
 }
 
-const ALL_CATEGORIES = ['Tous', 'Massages', 'Soins visage', 'Soins corps', 'Beauté']
+const ALL_CATEGORIES = ['Tous', 'Massages', 'Soins visage', 'Soins corps', 'Beauté', 'Coiffure', 'Forfaits']
 
 function DeleteServiceButton({ id }: { id: string }) {
   const [pending, startTransition] = useTransition()

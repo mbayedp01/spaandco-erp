@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createServerClient } from '@/lib/supabase/server'
 import { getCurrentUserRole } from '@/lib/user-role'
 import { getCurrentSpaId } from '@/lib/spa'
+import { logCurrentAction } from '@/lib/audit'
 
 async function requireAdmin() {
   const role = await getCurrentUserRole()
@@ -29,11 +30,9 @@ export async function createPlanAction(data: PlanFormData): Promise<{ error?: st
   await requireAdmin()
   const supabase = createServerClient()
   const spaId = getCurrentSpaId()
-  const { error } = await (supabase.from('membership_plans') as any).insert({
-    ...data,
-    spa_id: spaId,
-  })
+  const { error } = await (supabase.from('membership_plans') as any).insert({ ...data, spa_id: spaId })
   if (error) return { error: error.message }
+  await logCurrentAction({ action: 'created', entity_type: 'plan', entity_name: data.name, spa_id: spaId })
   revalidatePath('/subscriptions')
   return {}
 }
@@ -43,6 +42,7 @@ export async function updatePlanAction(id: string, data: Partial<PlanFormData>):
   const supabase = createServerClient()
   const { error } = await (supabase.from('membership_plans') as any).update(data).eq('id', id)
   if (error) return { error: error.message }
+  await logCurrentAction({ action: 'updated', entity_type: 'plan', entity_name: data.name ?? id })
   revalidatePath('/subscriptions')
   return {}
 }
@@ -50,8 +50,10 @@ export async function updatePlanAction(id: string, data: Partial<PlanFormData>):
 export async function deletePlanAction(id: string): Promise<{ error?: string }> {
   await requireAdmin()
   const supabase = createServerClient()
+  const { data: plan } = await (supabase.from('membership_plans') as any).select('name').eq('id', id).single()
   const { error } = await supabase.from('membership_plans').delete().eq('id', id)
   if (error) return { error: error.message }
+  await logCurrentAction({ action: 'deleted', entity_type: 'plan', entity_name: plan?.name ?? id })
   revalidatePath('/subscriptions')
   return {}
 }
@@ -59,8 +61,10 @@ export async function deletePlanAction(id: string): Promise<{ error?: string }> 
 export async function togglePlanAction(id: string, currentActive: boolean): Promise<{ error?: string }> {
   await requireAdmin()
   const supabase = createServerClient()
+  const { data: plan } = await (supabase.from('membership_plans') as any).select('name').eq('id', id).single()
   const { error } = await (supabase.from('membership_plans') as any).update({ active: !currentActive }).eq('id', id)
   if (error) return { error: error.message }
+  await logCurrentAction({ action: 'updated', entity_type: 'plan', entity_name: `${plan?.name ?? id} → ${!currentActive ? 'actif' : 'inactif'}` })
   revalidatePath('/subscriptions')
   return {}
 }

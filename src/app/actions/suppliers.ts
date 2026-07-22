@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createServerClient } from '@/lib/supabase/server'
 import { getCurrentSpaId } from '@/lib/spa'
+import { logCurrentAction } from '@/lib/audit'
 
 export async function createSupplierAction(formData: FormData): Promise<{ error?: string }> {
   const spaId         = getCurrentSpaId()
@@ -29,6 +30,7 @@ export async function createSupplierAction(formData: FormData): Promise<{ error?
   } as any)
 
   if (error) return { error: error.message }
+  await logCurrentAction({ action: 'created', entity_type: 'supplier', entity_name: name, spa_id: spaId })
   revalidatePath('/suppliers')
   return {}
 }
@@ -49,14 +51,17 @@ export async function updateSupplierAction(id: string, formData: FormData): Prom
     .update({ name, category: category || null, contact: contact || null, phone: phone || null, email: email || null, monthly_spend, status })
     .eq('id', id)
   if (error) return { error: error.message }
+  await logCurrentAction({ action: 'updated', entity_type: 'supplier', entity_name: name })
   revalidatePath('/suppliers')
   return {}
 }
 
 export async function deleteSupplierAction(id: string): Promise<{ error?: string }> {
   const supabase = createServerClient()
+  const { data } = await (supabase.from('suppliers') as any).select('name').eq('id', id).single()
   const { error } = await (supabase.from('suppliers') as any).delete().eq('id', id)
   if (error) return { error: error.message }
+  await logCurrentAction({ action: 'deleted', entity_type: 'supplier', entity_name: data?.name ?? id })
   revalidatePath('/suppliers')
   return {}
 }

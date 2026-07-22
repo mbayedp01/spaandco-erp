@@ -5,5 +5,6 @@ export interface AuditLogEntry {
   action: string
   entity_type: string
   entity_name: string | null
+  spa_id: string | null
   created_at: string
 }

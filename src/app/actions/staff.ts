@@ -3,8 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createServerClient } from '@/lib/supabase/server'
 import { getCurrentSpaId } from '@/lib/spa'
-import { getCurrentUserRole } from '@/lib/user-role'
-import { logAction } from '@/lib/audit'
+import { logCurrentAction } from '@/lib/audit'
 import type { Database } from '@/lib/supabase/types'
 
 type StaffMember = Database['public']['Tables']['staff']['Row']
@@ -32,6 +31,7 @@ export async function createStaffAction(formData: FormData): Promise<{ error?: s
   } as any)
 
   if (error) return { error: error.message }
+  await logCurrentAction({ action: 'created', entity_type: 'staff', entity_name: `${first_name} ${last_name}`, spa_id: spaId })
   revalidatePath('/staff')
   revalidatePath('/planning')
   return {}
@@ -54,20 +54,7 @@ export async function updateStaffAction(id: string, formData: FormData): Promise
     .update({ first_name, last_name, email: email || null, role, specialty: specialty || null, salary, status, rating })
     .eq('id', id)
   if (error) return { error: error.message }
-
-  const userRole = await getCurrentUserRole()
-  if (userRole === 'caissier') {
-    const { data: { user } } = await supabase.auth.getUser()
-    await logAction({
-      actor_email: user?.email ?? '',
-      actor_role:  userRole,
-      action:      'updated',
-      entity_type: 'staff',
-      entity_name: `${first_name} ${last_name}`,
-      spa_id:      getCurrentSpaId(),
-    })
-  }
-
+  await logCurrentAction({ action: 'updated', entity_type: 'staff', entity_name: `${first_name} ${last_name}` })
   revalidatePath('/staff')
   revalidatePath('/planning')
   return {}
@@ -84,20 +71,8 @@ export async function deleteStaffAction(id: string): Promise<{ error?: string }>
   const { error } = await (supabase.from('staff') as any).delete().eq('id', id)
   if (error) return { error: error.message }
 
-  const userRole = await getCurrentUserRole()
-  if (userRole === 'caissier') {
-    const { data: { user } } = await supabase.auth.getUser()
-    const name = staffData ? `${staffData.first_name} ${staffData.last_name}` : id
-    await logAction({
-      actor_email: user?.email ?? '',
-      actor_role:  userRole,
-      action:      'deleted',
-      entity_type: 'staff',
-      entity_name: name,
-      spa_id:      getCurrentSpaId(),
-    })
-  }
-
+  const name = staffData ? `${staffData.first_name} ${staffData.last_name}` : id
+  await logCurrentAction({ action: 'deleted', entity_type: 'staff', entity_name: name })
   revalidatePath('/staff')
   revalidatePath('/planning')
   return {}
