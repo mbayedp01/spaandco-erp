@@ -36,9 +36,13 @@ function CreateModal({ onClose }: { onClose: () => void }) {
     if (!form.name || !form.email || !form.password) { setError('Tous les champs sont requis'); return }
     if (form.password.length < 6) { setError('Mot de passe : 6 caractères minimum'); return }
     start(async () => {
-      const res = await createUserAction(form.email, form.name, form.role, form.password)
-      if (res.error) { setError(res.error); return }
-      onClose()
+      try {
+        const res = await createUserAction(form.email, form.name, form.role, form.password)
+        if (res.error) { setError(res.error); return }
+        onClose()
+      } catch (e: unknown) {
+        setError(e instanceof Error ? e.message : 'Erreur inattendue, veuillez réessayer.')
+      }
     })
   }
 
