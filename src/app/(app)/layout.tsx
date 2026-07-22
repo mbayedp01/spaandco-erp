@@ -13,11 +13,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     getCurrentUserSpaId(),
   ])
 
-  // Caissier : restreint à son spa assigné (userSpaId), sinon le cookie courant
-  const effectiveSpaId = (userRole === 'caissier' && userSpaId) ? userSpaId : currentSpaId
-
-  // Caissier ne voit que son propre établissement dans la sidebar
-  const establishments = (userRole === 'caissier' && userSpaId)
+  // Tout utilisateur avec un spa_id assigné est restreint à son établissement
+  const isSpaRestricted = !!userSpaId
+  const effectiveSpaId  = isSpaRestricted ? userSpaId : currentSpaId
+  const establishments  = isSpaRestricted
     ? allEstablishments.filter(e => e.id === userSpaId)
     : allEstablishments
 
@@ -36,6 +35,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           establishments={establishments}
           currentSpaId={effectiveSpaId}
           userRole={userRole}
+          showSwitcher={!isSpaRestricted}
         />
         <div className="flex flex-1 flex-col overflow-hidden pb-16 lg:pb-0 bg-stone-50 dark:bg-slate-900">
           {children}

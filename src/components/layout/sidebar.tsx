@@ -15,9 +15,10 @@ interface SidebarProps {
   establishments: Establishment[]
   currentSpaId: string
   userRole: UserRole
+  showSwitcher: boolean
 }
 
-export function Sidebar({ establishments, currentSpaId, userRole }: SidebarProps) {
+export function Sidebar({ establishments, currentSpaId, userRole, showSwitcher }: SidebarProps) {
   const pathname = usePathname()
   const items    = getNavItemsForRole(userRole)
 
@@ -34,10 +35,10 @@ export function Sidebar({ establishments, currentSpaId, userRole }: SidebarProps
       </div>
 
       <div className="border-b pb-1" style={{ borderColor: 'rgb(var(--sidebar-mid))' }}>
-        {userRole === 'admin' ? (
+        {showSwitcher ? (
           <SpaSwitcher establishments={establishments} currentSpaId={currentSpaId} />
         ) : (
-          /* Caissier : affiche son spa en lecture seule, sans switcher */
+          /* Utilisateur restreint à un spa : affichage en lecture seule */
           <div className="px-3 pb-3">
             <div className="flex items-center gap-2.5 rounded-md bg-white/5 px-3 py-2.5">
               <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[11px] font-bold text-white bg-primary-600">
