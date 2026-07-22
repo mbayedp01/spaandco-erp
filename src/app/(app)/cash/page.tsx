@@ -7,7 +7,7 @@ import { getInventory } from '@/lib/db/inventory'
 import { getCurrentSpaId } from '@/lib/spa'
 import { cn } from '@/lib/utils'
 import { TrendingUp, TrendingDown, Wallet } from 'lucide-react'
-import { AddTransactionButton } from '@/components/forms/transaction-form'
+import { AddTransactionButton, AddExpenseButton } from '@/components/forms/transaction-form'
 import { PrintReceiptButton } from '@/components/receipts/print-receipt'
 import { CashFilterBar } from './filter-bar'
 
@@ -139,7 +139,10 @@ export default async function CashPage({
                 </span>
               )}
             </h2>
-            <AddTransactionButton clients={clients} services={services} products={products} establishment={establishment} />
+            <div className="flex items-center gap-2">
+              <AddExpenseButton clients={clients} establishment={establishment} />
+              <AddTransactionButton clients={clients} services={services} products={products} establishment={establishment} />
+            </div>
           </div>
 
           {/* Filtres */}

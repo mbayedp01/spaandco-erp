@@ -1,12 +1,15 @@
 import { Header } from '@/components/layout/header'
 import { createServerClient } from '@/lib/supabase/server'
 import { getStaff } from '@/lib/db/staff'
+import { getAppointments } from '@/lib/db/appointments'
+import { getClients } from '@/lib/db/clients'
 import { getCurrentSpaId } from '@/lib/spa'
 import { getCurrentUserRole, getCurrentUserName } from '@/lib/user-role'
 import type { Database } from '@/lib/supabase/types'
 import { cn } from '@/lib/utils'
 import { getServices } from '@/lib/db/services'
 import { MedecinAppointmentActions } from '../appointments/medecin-actions'
+import { AddAppointmentButton } from '@/components/forms/appointment-form'
 import { ChevronLeft, ChevronRight, CalendarDays, UserCheck, Clock, Users } from 'lucide-react'
 
 type Appointment = Database['public']['Tables']['appointments']['Row']
@@ -148,6 +151,7 @@ function MedecinView({
 
 function AdminCaissierView({
   appointments, staff, staffNames, serviceNames, weekDays, todayIndex, weekLabel, showCA,
+  clientItems, serviceItems, existingAppts,
 }: {
   appointments: Appointment[]
   staff: Awaited<ReturnType<typeof getStaff>>
@@ -157,6 +161,9 @@ function AdminCaissierView({
   todayIndex: number
   weekLabel: string
   showCA: boolean
+  clientItems: { id: string; name: string }[]
+  serviceItems: { id: string; name: string; price: number | null; duration: number | null; category: string | null }[]
+  existingAppts: { date: string | null; time: string | null; staff_name: string | null; duration: number | null }[]
 }) {
   const today      = weekDays[todayIndex]?.iso ?? new Date().toISOString().split('T')[0]
   const therapists = staff.filter(s =>
@@ -167,7 +174,7 @@ function AdminCaissierView({
 
   return (
     <div className="flex-1 overflow-y-auto p-4 sm:p-6">
-      {/* Nav semaine + bouton affecter */}
+      {/* Nav semaine + bouton Nouveau RDV */}
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <div className="flex items-center rounded-lg border border-stone-200 bg-white">
@@ -182,6 +189,12 @@ function AdminCaissierView({
             </button>
           </div>
         </div>
+        <AddAppointmentButton
+          staffNames={staffNames}
+          clients={clientItems}
+          services={serviceItems}
+          existingAppointments={existingAppts}
+        />
       </div>
 
       {/* KPIs */}
@@ -322,11 +335,12 @@ function AdminCaissierView({
 
 export default async function PlanningPage() {
   const spaId = getCurrentSpaId()
-  const [userRole, userName, staffList, services] = await Promise.all([
+  const [userRole, userName, staffList, services, clients] = await Promise.all([
     getCurrentUserRole(),
     getCurrentUserName(),
     getStaff(spaId),
     getServices(spaId),
+    getClients(spaId),
   ])
 
   const weekDays   = getWeekDates()
@@ -339,10 +353,24 @@ export default async function PlanningPage() {
   })()
 
   const staffNameFilter  = userRole === 'medecin' ? userName : null
-  const weekAppointments = await getWeekAppointments(weekDays[0].iso, weekDays[5].iso, spaId, staffNameFilter)
+  const [weekAppointments, allAppointments] = await Promise.all([
+    getWeekAppointments(weekDays[0].iso, weekDays[5].iso, spaId, staffNameFilter),
+    getAppointments(spaId),
+  ])
 
   const staffNames   = staffList.map(s => `${s.first_name} ${s.last_name}`)
   const serviceNames = services.map(s => s.name)
+
+  const clientItems  = clients.map(c => ({ id: c.id, name: `${c.first_name} ${c.last_name}` }))
+  const serviceItems = services.map(s => ({
+    id: s.id, name: s.name,
+    price:    (s as any).price    ?? null,
+    duration: (s as any).duration ?? null,
+    category: (s as any).category ?? null,
+  }))
+  const existingAppts = allAppointments.map(a => ({
+    date: a.date, time: a.time, staff_name: a.staff_name ?? null, duration: (a as any).duration ?? null,
+  }))
 
   const title = userRole === 'medecin'
     ? `Mes rendez-vous${userName ? ` — ${userName}` : ''}`
@@ -368,6 +396,9 @@ export default async function PlanningPage() {
           todayIndex={todayIndex}
           weekLabel={weekLabel}
           showCA={userRole === 'admin'}
+          clientItems={clientItems}
+          serviceItems={serviceItems}
+          existingAppts={existingAppts}
         />
       )}
     </>

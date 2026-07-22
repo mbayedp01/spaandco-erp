@@ -55,21 +55,15 @@ function SupplierForm({ supplier, onClose }: { supplier?: Supplier; onClose: () 
           <input name="email" type="email" defaultValue={supplier?.email ?? ''} className={inputCls} placeholder="contact@fournisseur.sn" />
         </div>
       </div>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      {supplier && (
         <div>
-          <label className={labelCls}>Dépense mensuelle (F)</label>
-          <input name="monthly_spend" type="number" min="0" defaultValue={supplier?.monthly_spend ?? 0} className={inputCls} />
+          <label className={labelCls}>Statut</label>
+          <select name="status" defaultValue={supplier.status} className={inputCls}>
+            <option value="actif">Actif</option>
+            <option value="inactif">Inactif</option>
+          </select>
         </div>
-        {supplier && (
-          <div>
-            <label className={labelCls}>Statut</label>
-            <select name="status" defaultValue={supplier.status} className={inputCls}>
-              <option value="actif">Actif</option>
-              <option value="inactif">Inactif</option>
-            </select>
-          </div>
-        )}
-      </div>
+      )}
       {error && <p className="rounded-md bg-rose-50 px-3 py-2 text-xs text-rose-600">{error}</p>}
       <div className="flex gap-2 pt-1">
         <button type="button" onClick={onClose} className="flex-1 rounded-md border border-stone-200 py-2 text-sm font-medium text-slate-700 hover:bg-stone-50 cursor-pointer">

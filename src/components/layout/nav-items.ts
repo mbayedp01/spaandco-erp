@@ -13,6 +13,7 @@ import {
   CalendarCheck,
   Truck,
   BadgeCheck,
+  ShieldCheck,
   type LucideIcon,
 } from 'lucide-react'
 import type { UserRole } from '@/lib/roles'
@@ -39,7 +40,8 @@ export const navItems: NavItem[] = [
   { label: 'Comptabilité',    href: '/accounting',     icon: Calculator,                             roles: ['admin'] },
   { label: 'Marketing',       href: '/marketing',      icon: Megaphone,                              roles: ['admin'] },
   { label: 'Rapports',        href: '/reports',        icon: BarChart3,                              roles: ['admin'] },
-  { label: 'Paramètres',      href: '/settings',       icon: Settings,        section: 'Système',   roles: ['admin'] },
+  { label: 'Utilisateurs',    href: '/users',          icon: ShieldCheck,     section: 'Système',   roles: ['admin'] },
+  { label: 'Paramètres',      href: '/settings',       icon: Settings,                               roles: ['admin'] },
 ]
 
 export function getNavItemsForRole(role: UserRole): NavItem[] {

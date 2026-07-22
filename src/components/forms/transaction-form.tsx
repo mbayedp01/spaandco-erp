@@ -97,22 +97,23 @@ interface SavedTx {
 }
 
 function TransactionForm({
-  clients, services, products, onClose, onSaved,
+  clients, services, products, onClose, onSaved, defaultType = 'recette',
 }: {
   clients: ClientItem[]
   services: ServiceItem[]
   products: ProductItem[]
   onClose: () => void
   onSaved: (tx: SavedTx) => void
+  defaultType?: 'recette' | 'charge'
 }) {
-  const [mode, setMode]             = useState<Mode>('prestation')
+  const [mode, setMode]             = useState<Mode>(defaultType === 'charge' ? 'libre' : 'prestation')
   const [clientName, setClientName] = useState('')
   const [label, setLabel]           = useState('')
   const [amount, setAmount]         = useState('')
-  const [category, setCategory]     = useState('Soins')
+  const [category, setCategory]     = useState(defaultType === 'charge' ? 'Charges' : 'Soins')
   const [qty, setQty]               = useState(1)
   const [payMethod, setPayMethod]   = useState('Cash')
-  const [txType, setTxType]         = useState<'recette' | 'charge'>('recette')
+  const [txType, setTxType]         = useState<'recette' | 'charge'>(defaultType)
   const [error, setError]           = useState('')
   const [pending, start]            = useTransition()
 
@@ -310,6 +311,51 @@ function TransactionForm({
 
 // ─── Export ───────────────────────────────────────────────────────────────────
 
+function TransactionButton({
+  clients, services, products, establishment, defaultType, label: btnLabel, className,
+}: {
+  clients: ClientItem[]
+  services: ServiceItem[]
+  products: ProductItem[]
+  establishment: ReceiptEstablishment
+  defaultType?: 'recette' | 'charge'
+  label: string
+  className: string
+}) {
+  const [open, setOpen]   = useState(false)
+  const [saved, setSaved] = useState<SavedTx | null>(null)
+
+  function handleSaved(tx: SavedTx) { setOpen(false); setSaved(tx) }
+
+  const title = defaultType === 'charge' ? 'Nouvelle dépense' : 'Nouvelle écriture'
+
+  return (
+    <>
+      <button onClick={() => setOpen(true)} className={className}>
+        <Plus className="h-4 w-4" />
+        {btnLabel}
+      </button>
+
+      <Modal open={open} onClose={() => setOpen(false)} title={title}>
+        <TransactionForm
+          clients={clients} services={services} products={products}
+          onClose={() => setOpen(false)} onSaved={handleSaved}
+          defaultType={defaultType}
+        />
+      </Modal>
+
+      {saved && (
+        <InvoiceModal
+          transaction={{ id: 'new-' + Date.now(), label: saved.label, category: saved.category, amount: saved.amount, type: saved.type, payment_method: saved.payment_method, date: saved.date }}
+          establishment={establishment}
+          clientName={saved.client_name}
+          onClose={() => setSaved(null)}
+        />
+      )}
+    </>
+  )
+}
+
 export function AddTransactionButton({
   clients = [], services = [], products = [], establishment,
 }: {
@@ -318,44 +364,29 @@ export function AddTransactionButton({
   products?: ProductItem[]
   establishment?: ReceiptEstablishment
 }) {
-  const [open, setOpen]       = useState(false)
-  const [saved, setSaved]     = useState<SavedTx | null>(null)
-
   const spa = establishment ?? { name: 'Spa and Co', city: 'Dakar', address: null, phone: null }
-
-  function handleSaved(tx: SavedTx) {
-    setOpen(false)
-    setSaved(tx)
-  }
-
   return (
-    <>
-      <button
-        onClick={() => setOpen(true)}
-        className="flex items-center gap-2 rounded-md bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700 cursor-pointer"
-      >
-        <Plus className="h-4 w-4" />
-        Ajouter
-      </button>
+    <TransactionButton
+      clients={clients} services={services} products={products} establishment={spa}
+      label="Ajouter"
+      className="flex items-center gap-2 rounded-md bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700 cursor-pointer"
+    />
+  )
+}
 
-      <Modal open={open} onClose={() => setOpen(false)} title="Nouvelle écriture">
-        <TransactionForm
-          clients={clients}
-          services={services}
-          products={products}
-          onClose={() => setOpen(false)}
-          onSaved={handleSaved}
-        />
-      </Modal>
-
-      {saved && (
-        <InvoiceModal
-          transaction={{ id: 'new-' + Date.now(), label: saved.label, category: saved.category, amount: saved.amount, type: saved.type, payment_method: saved.payment_method, date: saved.date }}
-          establishment={spa}
-          clientName={saved.client_name}
-          onClose={() => setSaved(null)}
-        />
-      )}
-    </>
+export function AddExpenseButton({
+  clients = [], establishment,
+}: {
+  clients?: ClientItem[]
+  establishment?: ReceiptEstablishment
+}) {
+  const spa = establishment ?? { name: 'Spa and Co', city: 'Dakar', address: null, phone: null }
+  return (
+    <TransactionButton
+      clients={clients} services={[]} products={[]} establishment={spa}
+      defaultType="charge"
+      label="Dépense"
+      className="flex items-center gap-2 rounded-md border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-100 cursor-pointer"
+    />
   )
 }
