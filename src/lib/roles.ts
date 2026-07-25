@@ -19,7 +19,7 @@ const ROLE_ROUTES: Record<UserRole, string[]> = {
   ],
   caissier: [
     'dashboard', 'clients', 'subscriptions', 'appointments', 'services',
-    'cash', 'inventory',
+    'cash', 'inventory', 'suppliers',
   ],
 }
 

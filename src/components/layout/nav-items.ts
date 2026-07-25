@@ -35,7 +35,7 @@ export const navItems: NavItem[] = [
   { label: 'Personnel',       href: '/staff',          icon: UserCheck,       section: 'Équipe & Stock', roles: ['admin'] },
   { label: 'Planning',        href: '/planning',       icon: CalendarCheck,                          roles: ['admin'] },
   { label: 'Stocks',          href: '/inventory',      icon: Package,                                roles: ['admin', 'caissier'] },
-  { label: 'Fournisseurs',    href: '/suppliers',      icon: Truck,                                  roles: ['admin'] },
+  { label: 'Fournisseurs',    href: '/suppliers',      icon: Truck,                                  roles: ['admin', 'caissier'] },
   { label: 'Caisse',          href: '/cash',           icon: CreditCard,      section: 'Finance',   roles: ['admin', 'caissier'] },
   { label: 'Comptabilité',    href: '/accounting',     icon: Calculator,                             roles: ['admin'] },
   { label: 'Marketing',       href: '/marketing',      icon: Megaphone,                              roles: ['admin'] },
