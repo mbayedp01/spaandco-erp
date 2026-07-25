@@ -21,8 +21,8 @@ export async function getClients(spaId?: string | null): Promise<Client[]> {
 export async function createClient(payload: {
   first_name: string
   last_name: string
-  email: string
-  phone: string
+  email: string | null
+  phone: string | null
   birth_date?: string | null
   spa_id?: string | null
 }): Promise<{ data?: Client; error?: string }> {

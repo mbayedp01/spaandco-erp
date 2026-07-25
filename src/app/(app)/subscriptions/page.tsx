@@ -85,7 +85,7 @@ export default async function SubscriptionsPage() {
         {/* ── Formules disponibles ── */}
         <div className="mb-4 flex items-center justify-between">
           <h2 className="font-semibold text-slate-900">Formules disponibles</h2>
-          {isAdmin && <AddPlanButton />}
+          <AddPlanButton />
         </div>
 
         {plans.length === 0 ? (
