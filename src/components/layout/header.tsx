@@ -1,15 +1,20 @@
 import { Bell, Search, LogOut } from 'lucide-react'
 import { MobileNav } from './mobile-nav'
 import { logout } from '@/lib/auth'
-import { getCurrentUserRole, getCurrentUserName } from '@/lib/user-role'
+import { getCurrentUserRole, getCurrentUserName, getCurrentUserSpaId } from '@/lib/user-role'
 import { getRecentAuditLogs } from '@/lib/db/audit'
 import { NotificationBell } from './notification-bell'
 import { ROLE_LABELS } from '@/lib/roles'
 
 export async function Header({ title }: { title: string }) {
-  const [role, userName] = await Promise.all([getCurrentUserRole(), getCurrentUserName()])
+  const [role, userName, userSpaId] = await Promise.all([
+    getCurrentUserRole(),
+    getCurrentUserName(),
+    getCurrentUserSpaId(),
+  ])
   const isAdmin = role === 'admin'
-  const logs    = isAdmin ? await getRecentAuditLogs(25) : []
+  // Gestionnaire restreint à son spa, super-admin voit tous les spas
+  const logs = isAdmin ? await getRecentAuditLogs(50, userSpaId ?? undefined) : []
 
   const initials = userName
     ? userName.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
