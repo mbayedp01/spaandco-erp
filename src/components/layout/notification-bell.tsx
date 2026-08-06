@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Bell, X, Clock, User, Smartphone, Calendar, Scissors } from 'lucide-react'
+import { useState, useEffect, useTransition } from 'react'
+import { Bell, X, Clock, User, Smartphone, Calendar, Scissors, CheckCircle } from 'lucide-react'
 import type { AuditLogEntry } from '@/lib/audit-types'
 import type { KioskAppointment } from '@/lib/db/kiosk-appointments'
 import { createClient } from '@/lib/supabase/client'
+import { confirmKioskAppointment } from '@/app/actions/confirm-kiosk'
 
 export type { AuditLogEntry }
 
@@ -70,9 +71,11 @@ export function NotificationBell({
   kioskAppts?: KioskAppointment[]
   showJournal?: boolean
 }) {
-  const [open,  setOpen]  = useState(false)
-  const [tab,   setTab]   = useState<'kiosque' | 'journal'>('kiosque')
-  const [kiosk, setKiosk] = useState<KioskAppointment[]>(initial)
+  const [open,       setOpen]      = useState(false)
+  const [tab,        setTab]       = useState<'kiosque' | 'journal'>('kiosque')
+  const [kiosk,      setKiosk]     = useState<KioskAppointment[]>(initial)
+  const [confirming, setConfirming] = useState<string | null>(null)
+  const [isPending,  startTx]      = useTransition()
 
   // Realtime : nouvelles réservations kiosque
   useEffect(() => {
@@ -188,6 +191,30 @@ export function NotificationBell({
                         {total && (
                           <p className="mt-2 text-sm font-semibold text-amber-600 dark:text-amber-400">{total}</p>
                         )}
+
+                        <button
+                          disabled={isPending && confirming === appt.id}
+                          onClick={() => {
+                            const phone = parsePhone(appt.notes)
+                            setConfirming(appt.id)
+                            startTx(async () => {
+                              const res = await confirmKioskAppointment(
+                                appt.id,
+                                appt.client_name ?? '',
+                                phone,
+                                appt.spa_id ?? null,
+                              )
+                              if (res.success) {
+                                setKiosk(prev => prev.filter(a => a.id !== appt.id))
+                              }
+                              setConfirming(null)
+                            })
+                          }}
+                          className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-md bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-60 cursor-pointer transition-colors"
+                        >
+                          <CheckCircle className="h-3.5 w-3.5" />
+                          {isPending && confirming === appt.id ? 'Confirmation…' : 'Confirmer le rendez-vous'}
+                        </button>
                       </div>
                     )
                   })

@@ -17,8 +17,8 @@ export interface KiosqueOrder {
   client_phone: string
   items:        KiosqueItem[]
   total:        number
-  date:         string  // ISO date YYYY-MM-DD
-  time:         string  // HH:MM
+  date:         string        // ISO date YYYY-MM-DD
+  time:         string | null // HH:MM or null (kiosk without time selection)
   staff_name:   string
   staff_id:     string
 }
@@ -50,10 +50,12 @@ export async function submitKiosqueOrder(
         status:       'pending',
         notes:        `Borne kiosque | Tel: ${order.client_phone.trim()} | Total: ${order.total.toLocaleString('fr-FR')} F`,
       }
-      // Offset start time for next service in sequence
-      const [h, m] = currentTime.split(':').map(Number)
-      const totalMin = h * 60 + m + item.duration
-      currentTime = `${String(Math.floor(totalMin / 60)).padStart(2, '0')}:${String(totalMin % 60).padStart(2, '0')}`
+      // Offset start time for next service in sequence (skip if no time)
+      if (currentTime) {
+        const [h, m] = currentTime.split(':').map(Number)
+        const totalMin = h * 60 + m + item.duration
+        currentTime = `${String(Math.floor(totalMin / 60)).padStart(2, '0')}:${String(totalMin % 60).padStart(2, '0')}`
+      }
       return row
     })
   )
