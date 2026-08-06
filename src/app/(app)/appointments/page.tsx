@@ -8,6 +8,7 @@ import { getCurrentUserRole } from '@/lib/user-role'
 import { cn } from '@/lib/utils'
 import { AddAppointmentButton } from '@/components/forms/appointment-form'
 import { AppointmentStatusButtons } from './appointment-status-buttons'
+import { AppointmentAssignForm } from './appointment-assign-form'
 import { CalendarDays } from 'lucide-react'
 
 const statusStyle: Record<string, string> = {
@@ -131,6 +132,11 @@ export default async function AppointmentsPage() {
                   </span>
                   <AppointmentStatusButtons id={a.id} currentStatus={a.status} />
                 </div>
+                {a.status === 'pending' && staffNames.length > 0 && (
+                  <div className="w-full">
+                    <AppointmentAssignForm appointmentId={a.id} staffNames={staffNames} />
+                  </div>
+                )}
               </div>
             ))}
           </div>

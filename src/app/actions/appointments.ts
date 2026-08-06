@@ -47,3 +47,21 @@ export async function updateAppointmentStatusAction(id: string, status: string, 
   revalidatePath('/planning')
   return {}
 }
+
+export async function assignAndConfirmAppointmentAction(
+  id: string,
+  staffName: string,
+  time: string,
+): Promise<{ error?: string }> {
+  if (!staffName.trim() || !time.trim()) return { error: 'Thérapeute et heure requis' }
+  const supabase = createServerClient()
+  const { error } = await (supabase.from('appointments') as any)
+    .update({ staff_name: staffName.trim(), time: time.trim(), status: 'confirmed' })
+    .eq('id', id)
+  if (error) return { error: error.message }
+  await logCurrentAction({ action: 'updated', entity_type: 'appointment', entity_name: `Assigné → ${staffName} à ${time}` })
+  revalidatePath('/appointments')
+  revalidatePath('/dashboard')
+  revalidatePath('/planning')
+  return {}
+}
