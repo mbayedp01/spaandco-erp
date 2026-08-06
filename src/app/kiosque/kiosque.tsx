@@ -268,7 +268,7 @@ export function KiosqueApp({ services, staffList, appointments, establishments }
         <div style={{ display:'inline-flex', alignItems:'center', gap:14, padding:'24px 68px', background:`linear-gradient(135deg,${GOLD},${GOLD_D})`, borderRadius:3, color:BG, fontSize:24, fontWeight:700, letterSpacing:2, boxShadow:`0 0 50px rgba(201,168,76,.35)` }}>
           ✨ Commencer
         </div>
-        <p style={{ marginTop:26, color:W30, fontSize:16, letterSpacing:2 }}>Touchez l'écran pour commencer</p>
+        <p style={{ marginTop:26, color:W30, fontSize:16, letterSpacing:2 }}>Touchez l&apos;écran pour commencer</p>
       </div>
     </div>
   )
@@ -513,12 +513,12 @@ export function KiosqueApp({ services, staffList, appointments, establishments }
             <div>
               <p style={{ color:GOLD, fontSize:11, letterSpacing:2.5, textTransform:'uppercase', marginBottom:16 }}>
                 <Clock size={13} style={{ verticalAlign:'middle', marginRight:6 }}/>
-                Choisissez l'heure de début
+                Choisissez l&apos;heure de début
                 {cartDurMin > 0 && <span style={{ color:W30, fontWeight:400, marginLeft:8, letterSpacing:0, textTransform:'none', fontSize:11 }}>· durée : {dur(cartDurMin)}</span>}
               </p>
 
               {!staff ? (
-                <div style={{ color:W30, fontSize:14, padding:'32px 0' }}>← Sélectionnez d'abord un thérapeute</div>
+                <div style={{ color:W30, fontSize:14, padding:'32px 0' }}>← Sélectionnez d&apos;abord un thérapeute</div>
               ) : (
                 <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:8 }}>
                   {WORK_SLOTS.map(s => {
@@ -668,7 +668,7 @@ export function KiosqueApp({ services, staffList, appointments, establishments }
         </div>
       </div>
 
-      <p style={{ color:W30, fontSize:15 }}>Retour à l'accueil dans <span style={{ color:GOLD }}>{countdown}</span>s</p>
+      <p style={{ color:W30, fontSize:15 }}>Retour à l&apos;accueil dans <span style={{ color:GOLD }}>{countdown}</span>s</p>
       <button onClick={resetAll} style={{ marginTop:12, background:'none', border:`1px solid ${BORDER}`, color:W60, padding:'11px 28px', borderRadius:2, cursor:'pointer', fontSize:13, letterSpacing:1 }}>
         Nouvelle réservation
       </button>
