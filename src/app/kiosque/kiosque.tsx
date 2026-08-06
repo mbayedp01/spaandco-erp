@@ -37,13 +37,19 @@ interface Props {
 const SLIDES = ['/kiosque/bg1.webp','/kiosque/bg2.webp','/kiosque/bg3.webp','/kiosque/bg4.webp','/kiosque/bg5.webp']
 
 const CAT_CFG: Record<string, { label: string; desc: string }> = {
-  'Massages':     { label: 'Massages & Modelages', desc: 'Détente et relaxation' },
-  'Soins visage': { label: 'Soins du Visage',       desc: 'Éclat & rajeunissement' },
-  'Soins corps':  { label: 'Hammam & Corps',        desc: 'Gommage, hammam' },
-  'Beauté':       { label: 'Beauté & Onglerie',     desc: 'Cils, ongles, nail art' },
-  'Coiffure':     { label: 'Coiffure',              desc: 'Brushing, couleur' },
-  'Formules':     { label: 'Offres & Forfaits',     desc: 'Packages exclusifs' },
-  'Épilations':   { label: 'Épilations',            desc: 'Cire et laser' },
+  'Massages':              { label: 'Massages & Modelages',   desc: 'Détente et relaxation' },
+  'Soins visage':          { label: 'Soins du Visage',         desc: 'Éclat & rajeunissement' },
+  'Soins Wherteimar':      { label: 'Soins Wherteimar',        desc: 'Soins visage premium' },
+  'Extensions cils':       { label: 'Extensions de Cils',      desc: 'Cil à cil, volume russe' },
+  'Mains & Pieds':         { label: 'Mains & Pieds',           desc: 'Manucure, pédicure' },
+  'Onglerie':              { label: 'Onglerie',                 desc: 'Gel, capsule, nail art' },
+  'Hammam & Gommage':      { label: 'Hammam & Gommage',        desc: 'Rituel hammam, gommage' },
+  'Minceur':               { label: 'Minceur & Enveloppement', desc: 'Drainage, enveloppement' },
+  'Formules':              { label: 'Offres Simples',           desc: 'Packages bien-être' },
+  'Offres couple':         { label: 'Offres Couple',            desc: 'Moments à deux' },
+  'Soins événementiels':   { label: 'Soins Événementiels',      desc: 'Mariée, occasions spéciales' },
+  'Coiffure':              { label: 'Coiffure',                 desc: 'Couleur, brushing, extensions' },
+  'Épilations':            { label: 'Épilations',               desc: 'Cire, laser, body sculpting' },
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
