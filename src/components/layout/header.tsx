@@ -1,8 +1,9 @@
-import { Bell, Search, LogOut } from 'lucide-react'
+import { Search, LogOut } from 'lucide-react'
 import { MobileNav } from './mobile-nav'
 import { logout } from '@/lib/auth'
 import { getCurrentUserRole, getCurrentUserName, getCurrentUserSpaId } from '@/lib/user-role'
 import { getRecentAuditLogs } from '@/lib/db/audit'
+import { getKioskPendingAppointments } from '@/lib/db/kiosk-appointments'
 import { NotificationBell } from './notification-bell'
 import { ROLE_LABELS } from '@/lib/roles'
 
@@ -12,9 +13,14 @@ export async function Header({ title }: { title: string }) {
     getCurrentUserName(),
     getCurrentUserSpaId(),
   ])
-  const isAdmin = role === 'admin'
-  // Gestionnaire restreint à son spa, super-admin voit tous les spas
-  const logs = isAdmin ? await getRecentAuditLogs(50, userSpaId ?? undefined) : []
+  const isAdmin    = role === 'admin'
+  const isCaissier = role === 'caissier'
+  const spaFilter  = userSpaId ?? undefined
+
+  const [logs, kioskAppts] = await Promise.all([
+    isAdmin ? getRecentAuditLogs(50, spaFilter) : Promise.resolve([]),
+    (isAdmin || isCaissier) ? getKioskPendingAppointments(30, spaFilter) : Promise.resolve([]),
+  ])
 
   const initials = userName
     ? userName.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
@@ -33,13 +39,9 @@ export async function Header({ title }: { title: string }) {
           <span>Rechercher…</span>
         </div>
 
-        {isAdmin ? (
-          <NotificationBell logs={logs} />
-        ) : (
-          <button className="relative rounded-md p-2 text-stone-400 cursor-default">
-            <Bell className="h-5 w-5" />
-          </button>
-        )}
+        {(isAdmin || isCaissier) ? (
+          <NotificationBell logs={logs} kioskAppts={kioskAppts} showJournal={isAdmin} />
+        ) : null}
 
         <div className="flex items-center gap-3 border-l border-stone-200 pl-4">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-100 text-sm font-semibold text-primary-700">

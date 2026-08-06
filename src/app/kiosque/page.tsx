@@ -36,6 +36,7 @@ export default async function KiosquePage() {
     }),
     get('establishments', {
       select: 'id,name,city',
+      status: 'eq.active',
       order:  'name.asc',
     }),
   ])
