@@ -66,10 +66,12 @@ export function NotificationBell({
   logs,
   kioskAppts: initial = [],
   showJournal = false,
+  spaId = null,
 }: {
   logs: AuditLogEntry[]
   kioskAppts?: KioskAppointment[]
   showJournal?: boolean
+  spaId?: string | null
 }) {
   const [open,       setOpen]      = useState(false)
   const [tab,        setTab]       = useState<'kiosque' | 'journal'>('kiosque')
@@ -77,7 +79,7 @@ export function NotificationBell({
   const [confirming, setConfirming] = useState<string | null>(null)
   const [isPending,  startTx]      = useTransition()
 
-  // Realtime : nouvelles réservations kiosque
+  // Realtime : nouvelles réservations kiosque (filtrées par spa si non admin)
   useEffect(() => {
     const supabase = createClient()
     const ch = supabase
@@ -85,12 +87,14 @@ export function NotificationBell({
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'appointments' }, (p) => {
         const a = p.new as KioskAppointment
         if (a.status === 'pending' && a.notes?.includes('Borne kiosque')) {
-          setKiosk(prev => [a, ...prev])
+          if (!spaId || a.spa_id === spaId) {
+            setKiosk(prev => [a, ...prev])
+          }
         }
       })
       .subscribe()
     return () => { supabase.removeChannel(ch) }
-  }, [])
+  }, [spaId])
 
   const kioskCount  = kiosk.length
   const totalBadge  = kioskCount + (showJournal ? logs.length : 0)

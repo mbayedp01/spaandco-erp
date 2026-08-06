@@ -40,7 +40,7 @@ export async function Header({ title }: { title: string }) {
         </div>
 
         {(isAdmin || isCaissier) ? (
-          <NotificationBell logs={logs} kioskAppts={kioskAppts} showJournal={isAdmin} />
+          <NotificationBell logs={logs} kioskAppts={kioskAppts} showJournal={isAdmin} spaId={spaFilter ?? null} />
         ) : null}
 
         <div className="flex items-center gap-3 border-l border-stone-200 pl-4">
