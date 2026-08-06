@@ -119,6 +119,7 @@ export function KiosqueApp({ services, staffList, appointments, establishments }
   const isTablet  = winW < 1100
 
   useEffect(() => {
+    setWinW(window.innerWidth)
     const handle = () => setWinW(window.innerWidth)
     window.addEventListener('resize', handle)
     return () => window.removeEventListener('resize', handle)
