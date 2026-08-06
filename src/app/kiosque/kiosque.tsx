@@ -3,7 +3,7 @@
 import { useState, useEffect, useTransition } from 'react'
 import {
   ShoppingBag, Plus, Minus, X, ChevronRight, Clock,
-  CheckCircle, Phone, User, ArrowLeft, MapPin, Calendar,
+  CheckCircle, Phone, User, ArrowLeft, Calendar,
 } from 'lucide-react'
 import { submitKiosqueOrder, type KiosqueItem } from '@/app/actions/kiosque'
 
@@ -26,7 +26,7 @@ interface StaffMember   { id: string; first_name: string; last_name: string; spe
 interface Appointment   { date: string; time: string|null; duration: number|null; staff_name: string|null; staff_id: string|null; status: string; spa_id: string|null }
 interface Establishment { id: string; name: string; city: string }
 interface CartItem      { service: Service; qty: number }
-type Screen = 'welcome' | 'spa' | 'catalogue' | 'disponibilite' | 'info' | 'success'
+type Screen = 'welcome' | 'catalogue' | 'disponibilite' | 'info' | 'success'
 
 interface Props {
   services:       Service[]
@@ -228,7 +228,7 @@ export function KiosqueApp({ services, staffList, appointments, establishments }
   // WELCOME
   // ════════════════════════════════════════════════════════════════════════
   if (screen === 'welcome') return (
-    <div onClick={() => setScreen('spa')}
+    <div onClick={() => { setSpa(establishments.find(e => e.name === 'Mermoz') ?? establishments[0] ?? null); goToCatalogue() }}
       style={{ position:'fixed', inset:0, background:BG, display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden', cursor:'pointer' }}>
       {SLIDES.map((src, i) => (
         <div key={src} style={{ position:'absolute', inset:0, backgroundImage:`url(${src})`, backgroundSize:'cover', backgroundPosition:'center', opacity:i===slideIdx?1:0, transition:'opacity 1.5s ease-in-out' }} />
@@ -256,47 +256,6 @@ export function KiosqueApp({ services, staffList, appointments, establishments }
   )
 
   // ════════════════════════════════════════════════════════════════════════
-  // CHOIX DU SPA
-  // ════════════════════════════════════════════════════════════════════════
-  if (screen === 'spa') return (
-    <div style={{ position:'fixed', inset:0, background:BG, display:'flex', flexDirection:'column', overflow:'hidden' }}>
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'center', padding:'14px 24px', borderBottom:`1px solid ${BORDER}`, flexShrink:0 }}>
-        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-          <Lotus size={22}/>
-          <span style={{ fontFamily:'"Playfair Display",serif', color:W, fontSize:isMobile?15:18, letterSpacing:2 }}>
-            SPA & CO <span style={{ color:GOLD }}>LUXURY</span>
-          </span>
-        </div>
-      </div>
-      <div style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:isMobile?24:40, overflowY:'auto' }}>
-        <p style={{ color:GOLD, fontSize:11, letterSpacing:3, textTransform:'uppercase', marginBottom:10 }}>Étape 1 / 4</p>
-        <h1 style={{ fontFamily:'"Playfair Display",serif', fontSize:isMobile?32:52, color:W, marginBottom:8, textAlign:'center' }}>Choisissez votre spa</h1>
-        <div style={{ width:isMobile?'100%':400, margin:'0 auto 32px' }}><Divider/></div>
-        <div style={{ display:'flex', flexDirection:isMobile?'column':'row', gap:isMobile?16:32, justifyContent:'center', width:'100%', maxWidth:780 }}>
-          {establishments.map(est => (
-            <button key={est.id} onClick={() => { setSpa(est); goToCatalogue() }}
-              style={{
-                flex:1, maxWidth:isMobile?'100%':380, padding:isMobile?'28px 24px':'48px 40px',
-                background:CARD, border:`2px solid ${BORDER}`,
-                borderRadius:4, cursor:'pointer', textAlign:'center',
-                transition:'border-color .2s, transform .15s',
-              }}
-              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = BORDER_A; (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1.02)' }}
-              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = BORDER; (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)' }}
-            >
-              <Lotus size={isMobile?40:56}/>
-              <div style={{ fontFamily:'"Playfair Display",serif', fontSize:isMobile?28:40, color:W, marginTop:14, marginBottom:6 }}>{est.name}</div>
-              <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:6, color:GOLD, fontSize:14 }}>
-                <MapPin size={13}/> {est.city}
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  )
-
-  // ════════════════════════════════════════════════════════════════════════
   // CATALOGUE
   // ════════════════════════════════════════════════════════════════════════
   if (screen === 'catalogue') {
@@ -309,8 +268,8 @@ export function KiosqueApp({ services, staffList, appointments, establishments }
 
         {/* Header */}
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:`10px ${isMobile?14:32}px`, borderBottom:`1px solid ${BORDER}`, flexShrink:0 }}>
-          <button onClick={() => setScreen('spa')} style={{ display:'flex', alignItems:'center', gap:5, background:'none', border:`1px solid ${BORDER}`, color:W60, cursor:'pointer', padding:'6px 12px', borderRadius:2, fontSize:12 }}>
-            <ArrowLeft size={13}/> {isMobile ? 'Spa' : 'Changer de spa'}
+          <button onClick={() => setScreen('welcome')} style={{ display:'flex', alignItems:'center', gap:5, background:'none', border:`1px solid ${BORDER}`, color:W60, cursor:'pointer', padding:'6px 12px', borderRadius:2, fontSize:12 }}>
+            <ArrowLeft size={13}/> Accueil
           </button>
           <div style={{ display:'flex', alignItems:'center', gap:7 }}>
             <Lotus size={22}/>
@@ -319,7 +278,7 @@ export function KiosqueApp({ services, staffList, appointments, establishments }
             </span>
           </div>
           <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-            {!isMobile && <span style={{ color:GOLD, fontSize:13, fontFamily:'"Playfair Display",serif', fontStyle:'italic' }}>{spa?.name}</span>}
+            {!isMobile && <span style={{ color:GOLD, fontSize:13, fontFamily:'"Playfair Display",serif', fontStyle:'italic' }}>Mermoz</span>}
             <div style={{ position:'relative', color:GOLD }}>
               <ShoppingBag size={22}/>
               {cartCount > 0 && <span style={{ position:'absolute', top:-7, right:-7, width:18, height:18, borderRadius:'50%', background:GOLD, color:BG, fontSize:10, fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center' }}>{cartCount}</span>}
@@ -485,7 +444,7 @@ export function KiosqueApp({ services, staffList, appointments, establishments }
         </div>
 
         <div style={{ flex:1, overflowY:'auto', padding:`${isMobile?16:32}px ${isMobile?14:48}px` }}>
-          <p style={{ color:GOLD, fontSize:11, letterSpacing:3, textTransform:'uppercase', marginBottom:8 }}>Étape 3 / 4</p>
+          <p style={{ color:GOLD, fontSize:11, letterSpacing:3, textTransform:'uppercase', marginBottom:8 }}>Étape 2 / 3</p>
           <h1 style={{ fontFamily:'"Playfair Display",serif', fontSize:isMobile?26:44, color:W, marginBottom:6 }}>Choisissez votre créneau</h1>
           <Divider/>
 
@@ -627,7 +586,7 @@ export function KiosqueApp({ services, staffList, appointments, establishments }
           {/* Form */}
           <div style={{ flex:1, padding:isMobile?'24px 16px':isTablet?'36px 40px':'48px 64px' }}>
             <div style={{ maxWidth:520 }}>
-              <p style={{ color:GOLD, fontSize:11, letterSpacing:3, textTransform:'uppercase', marginBottom:8 }}>Étape 4 / 4</p>
+              <p style={{ color:GOLD, fontSize:11, letterSpacing:3, textTransform:'uppercase', marginBottom:8 }}>Étape 3 / 3</p>
               <h1 style={{ fontFamily:'"Playfair Display",serif', fontSize:isMobile?28:46, color:W, marginBottom:6 }}>Vos informations</h1>
               <Divider/>
               <p style={{ color:W60, fontSize:isMobile?13:15, margin:'16px 0 24px', lineHeight:1.8 }}>
