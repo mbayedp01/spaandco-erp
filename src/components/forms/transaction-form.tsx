@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition, useRef, useEffect } from 'react'
-import { Plus, Search } from 'lucide-react'
+import { Plus, Search, X, ShoppingBag } from 'lucide-react'
 import { Modal } from '@/components/ui/modal'
 import { addTransactionAction } from '@/app/actions/cash'
 import { InvoiceModal } from '@/components/receipts/print-receipt'
@@ -12,11 +12,12 @@ export type ServiceItem   = { id: string; name: string; category: string | null;
 export type ProductItem   = { id: string; name: string; unit_price: number; unit: string | null; quantity: number }
 
 type Mode = 'prestation' | 'produit' | 'libre'
+interface CartLine { service: ServiceItem; qty: number }
 
 const inputCls = 'w-full rounded-md border border-stone-200 px-3 py-2 text-sm text-slate-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-primary-500'
 const labelCls = 'block text-xs font-medium text-stone-600 mb-1'
 
-// ─── Generic combobox ─────────────────────────────────────────────────────────
+// ─── Client / product combobox ─────────────────────────────────────────────────
 
 function Combobox<T extends { id: string; name: string }>({
   items, placeholder, onSelect, renderSub,
@@ -38,29 +39,19 @@ function Combobox<T extends { id: string; name: string }>({
 
   const filtered = items.filter(i => i.name.toLowerCase().includes(q.toLowerCase())).slice(0, 8)
 
-  function pick(item: T) {
-    setQ(item.name)
-    onSelect(item)
-    setOpen(false)
-  }
-
-  function clear() {
-    setQ('')
-    onSelect(null)
-  }
+  function pick(item: T) { setQ(item.name); onSelect(item); setOpen(false) }
+  function clear() { setQ(''); onSelect(null) }
 
   return (
     <div ref={ref} className="relative">
       <div className="relative">
         <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-stone-400" />
         <input
-          type="text"
-          value={q}
+          type="text" value={q}
           onChange={e => { setQ(e.target.value); onSelect(null); setOpen(true) }}
           onFocus={() => setOpen(true)}
           className="w-full rounded-md border border-stone-200 pl-8 pr-3 py-2 text-sm text-slate-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
-          placeholder={placeholder}
-          autoComplete="off"
+          placeholder={placeholder} autoComplete="off"
         />
         {q && (
           <button type="button" onClick={clear} className="absolute right-2.5 top-2 text-stone-300 hover:text-stone-500 text-lg leading-none">×</button>
@@ -84,16 +75,79 @@ function Combobox<T extends { id: string; name: string }>({
   )
 }
 
+// ─── Multi-service picker ──────────────────────────────────────────────────────
+
+function ServicePicker({ services, cart, onAdd }: {
+  services: ServiceItem[]
+  cart: CartLine[]
+  onAdd: (s: ServiceItem) => void
+}) {
+  const [query, setQuery] = useState('')
+  const [open, setOpen]   = useState(false)
+  const closeTimer        = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const filtered = services
+    .filter(s =>
+      s.name.toLowerCase().includes(query.toLowerCase()) ||
+      (s.category ?? '').toLowerCase().includes(query.toLowerCase())
+    )
+    .slice(0, 9)
+
+  function scheduleClose() { closeTimer.current = setTimeout(() => setOpen(false), 150) }
+  function cancelClose()   { if (closeTimer.current) clearTimeout(closeTimer.current) }
+
+  return (
+    <div className="relative">
+      <div className="relative">
+        <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-stone-400" />
+        <input
+          type="text" value={query}
+          onChange={e => { setQuery(e.target.value); setOpen(true) }}
+          onFocus={() => { cancelClose(); setOpen(true) }}
+          onBlur={scheduleClose}
+          className="w-full rounded-md border border-stone-200 pl-8 pr-3 py-2 text-sm text-slate-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
+          placeholder="Ajouter une prestation…" autoComplete="off"
+        />
+      </div>
+      {open && (
+        <ul className="absolute z-[60] mt-1 max-h-64 w-full overflow-auto rounded-md border border-stone-200 bg-white py-1 shadow-lg">
+          {filtered.length > 0 ? filtered.map(s => {
+            const already = cart.some(l => l.service.id === s.id)
+            return (
+              <li key={s.id}>
+                <button type="button"
+                  onMouseDown={e => { e.preventDefault(); cancelClose(); onAdd(s); setQuery(''); setOpen(false) }}
+                  className="w-full px-3 py-2 text-left hover:bg-primary-50">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="truncate text-sm font-medium text-slate-900">{s.name}</span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {already && <span className="text-[10px] text-primary-600 font-medium">+ déjà</span>}
+                      {s.price != null && (
+                        <span className="text-xs font-semibold text-primary-700">{s.price.toLocaleString('fr-FR')} F</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 text-xs text-stone-400">
+                    {s.category && <span>{s.category}</span>}
+                    {s.duration && <span>· {s.duration} min</span>}
+                  </div>
+                </button>
+              </li>
+            )
+          }) : (
+            <li className="px-3 py-2 text-xs text-stone-400">Aucune prestation trouvée</li>
+          )}
+        </ul>
+      )}
+    </div>
+  )
+}
+
 // ─── Transaction form ─────────────────────────────────────────────────────────
 
 interface SavedTx {
-  label: string
-  amount: number
-  type: string
-  payment_method: string
-  category: string
-  client_name: string
-  date: string
+  label: string; amount: number; type: string
+  payment_method: string; category: string; client_name: string; date: string
 }
 
 function TransactionForm({
@@ -106,39 +160,62 @@ function TransactionForm({
   onSaved: (tx: SavedTx) => void
   defaultType?: 'recette' | 'charge'
 }) {
-  const [mode, setMode]             = useState<Mode>(defaultType === 'charge' ? 'libre' : 'prestation')
+  const [mode, setMode]           = useState<Mode>(defaultType === 'charge' ? 'libre' : 'prestation')
   const [clientName, setClientName] = useState('')
-  const [label, setLabel]           = useState('')
-  const [amount, setAmount]         = useState('')
-  const [category, setCategory]     = useState(defaultType === 'charge' ? 'Charges' : 'Soins')
-  const [qty, setQty]               = useState(1)
-  const [payMethod, setPayMethod]   = useState('Cash')
-  const [txType, setTxType]         = useState<'recette' | 'charge'>(defaultType)
-  const [error, setError]           = useState('')
-  const [pending, start]            = useTransition()
+  const [label, setLabel]         = useState('')
+  const [amount, setAmount]       = useState('')
+  const [category, setCategory]   = useState(defaultType === 'charge' ? 'Charges' : 'Soins')
+  const [prodQty, setProdQty]     = useState(1)
+  const [payMethod, setPayMethod] = useState('Cash')
+  const [txType, setTxType]       = useState<'recette' | 'charge'>(defaultType)
+  const [error, setError]         = useState('')
+  const [pending, start]          = useTransition()
 
-  function pickService(s: ServiceItem | null) {
-    if (!s) { setLabel(''); setAmount(''); return }
-    setLabel(s.name)
-    setAmount(s.price != null ? String(s.price) : '')
-    setCategory(s.category ?? 'Soins')
+  const [cart, setCart] = useState<CartLine[]>([])
+  const cartTotal = cart.reduce((s, l) => s + (l.service.price ?? 0) * l.qty, 0)
+  const cartLabel = cart.map(l => l.qty > 1 ? `${l.service.name} ×${l.qty}` : l.service.name).join(' + ')
+
+  function addToCart(s: ServiceItem) {
+    setCart(prev => {
+      const i = prev.findIndex(l => l.service.id === s.id)
+      if (i >= 0) { const n = [...prev]; n[i] = { ...n[i], qty: n[i].qty + 1 }; return n }
+      return [...prev, { service: s, qty: 1 }]
+    })
+    if (cart.length === 0) setCategory(s.category ?? 'Soins')
+  }
+  function removeFromCart(id: string) { setCart(prev => prev.filter(l => l.service.id !== id)) }
+  function setCartQty(id: string, q: number) {
+    if (q <= 0) return removeFromCart(id)
+    setCart(prev => prev.map(l => l.service.id === id ? { ...l, qty: q } : l))
   }
 
   function pickProduct(p: ProductItem | null) {
     if (!p) { setLabel(''); setAmount(''); return }
-    setLabel(p.name)
-    setAmount(String(p.unit_price))
-    setCategory('Stock')
+    setLabel(p.name); setAmount(String(p.unit_price)); setCategory('Stock')
   }
 
-  const totalAmount = mode === 'produit' ? qty * (Number(amount) || 0) : Number(amount) || 0
-  const fullLabel   = clientName ? `${clientName} — ${label || '—'}` : (label || '')
+  const totalAmount = mode === 'produit'
+    ? prodQty * (Number(amount) || 0)
+    : mode === 'prestation'
+    ? cartTotal
+    : Number(amount) || 0
+
+  const finalLabel = mode === 'prestation' ? cartLabel : label
+  const fullLabel  = clientName ? `${clientName} — ${finalLabel || '—'}` : (finalLabel || '')
+
+  function switchMode(m: Mode) {
+    setMode(m)
+    setLabel(''); setAmount('')
+    setCart([])
+    setCategory(m === 'produit' ? 'Stock' : m === 'libre' ? 'Divers' : 'Soins')
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
-    if (!label.trim()) { setError('Veuillez sélectionner ou saisir une désignation.'); return }
-    if (!totalAmount)  { setError('Le montant est requis.'); return }
+    if (mode === 'prestation' && cart.length === 0) { setError('Ajoutez au moins une prestation.'); return }
+    if (mode !== 'prestation' && !label.trim()) { setError('Veuillez sélectionner ou saisir une désignation.'); return }
+    if (!totalAmount) { setError('Le montant est requis.'); return }
 
     const fd = new FormData()
     fd.set('label',          fullLabel)
@@ -150,15 +227,7 @@ function TransactionForm({
     start(async () => {
       const result = await addTransactionAction(fd)
       if (result.error) { setError(result.error); return }
-      onSaved({
-        label:          fullLabel,
-        amount:         totalAmount,
-        type:           txType,
-        payment_method: payMethod,
-        category,
-        client_name:    clientName,
-        date:           new Date().toISOString().split('T')[0],
-      })
+      onSaved({ label: fullLabel, amount: totalAmount, type: txType, payment_method: payMethod, category, client_name: clientName, date: new Date().toISOString().split('T')[0] })
     })
   }
 
@@ -170,21 +239,18 @@ function TransactionForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+
       {/* Mode tabs */}
       <div className="flex rounded-lg border border-stone-200 overflow-hidden text-sm">
         {MODES.map(m => (
-          <button
-            key={m.key}
-            type="button"
-            onClick={() => { setMode(m.key); setLabel(''); setAmount(''); setCategory(m.key === 'produit' ? 'Stock' : 'Soins') }}
-            className={`flex-1 py-2 font-medium transition-colors cursor-pointer ${mode === m.key ? 'bg-primary-600 text-white' : 'text-stone-500 hover:bg-stone-50'}`}
-          >
+          <button key={m.key} type="button" onClick={() => switchMode(m.key)}
+            className={`flex-1 py-2 font-medium transition-colors cursor-pointer ${mode === m.key ? 'bg-primary-600 text-white' : 'text-stone-500 hover:bg-stone-50'}`}>
             {m.label}
           </button>
         ))}
       </div>
 
-      {/* Client (toujours visible) */}
+      {/* Client */}
       <div>
         <label className={labelCls}>Client (optionnel)</label>
         <Combobox<{ id: string; name: string; phone?: string | null }>
@@ -195,16 +261,43 @@ function TransactionForm({
         />
       </div>
 
-      {/* Prestation */}
+      {/* Prestations (multi) */}
       {mode === 'prestation' && (
         <div>
-          <label className={labelCls}>Prestation *</label>
-          <Combobox<ServiceItem>
-            items={services}
-            placeholder="Rechercher une prestation…"
-            onSelect={pickService}
-            renderSub={s => [s.category, s.duration ? `${s.duration} min` : null, s.price ? `${s.price.toLocaleString('fr-FR')} F` : null].filter(Boolean).join(' · ')}
-          />
+          <label className={labelCls}>Prestations *</label>
+          <ServicePicker services={services} cart={cart} onAdd={addToCart} />
+          {cart.length > 0 && (
+            <ul className="mt-2 space-y-1.5 rounded-md border border-stone-100 bg-stone-50 p-2">
+              {cart.map(({ service: svc, qty }) => (
+                <li key={svc.id} className="flex items-center gap-2 text-sm">
+                  <span className="flex-1 truncate font-medium text-slate-800">{svc.name}</span>
+                  <div className="flex items-center gap-1">
+                    <button type="button" onClick={() => setCartQty(svc.id, qty - 1)}
+                      className="h-5 w-5 rounded border border-stone-200 bg-white text-stone-500 hover:bg-stone-100 flex items-center justify-center text-xs cursor-pointer">−</button>
+                    <span className="w-4 text-center text-xs font-semibold">{qty}</span>
+                    <button type="button" onClick={() => setCartQty(svc.id, qty + 1)}
+                      className="h-5 w-5 rounded border border-stone-200 bg-white text-stone-500 hover:bg-stone-100 flex items-center justify-center text-xs cursor-pointer">+</button>
+                  </div>
+                  {svc.price != null && (
+                    <span className="w-20 shrink-0 text-right text-xs font-semibold text-primary-700">
+                      {(svc.price * qty).toLocaleString('fr-FR')} F
+                    </span>
+                  )}
+                  <button type="button" onClick={() => removeFromCart(svc.id)}
+                    className="shrink-0 text-stone-300 hover:text-rose-500 cursor-pointer">
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </li>
+              ))}
+              <li className="mt-1.5 flex items-center justify-between border-t border-stone-200 pt-1.5">
+                <span className="flex items-center gap-1 text-xs text-stone-500">
+                  <ShoppingBag className="h-3 w-3" />
+                  {cart.reduce((s, l) => s + l.qty, 0)} prestation{cart.reduce((s, l) => s + l.qty, 0) > 1 ? 's' : ''}
+                </span>
+                <span className="text-sm font-bold text-primary-700">{cartTotal.toLocaleString('fr-FR')} F</span>
+              </li>
+            </ul>
+          )}
         </div>
       )}
 
@@ -214,43 +307,34 @@ function TransactionForm({
           <div>
             <label className={labelCls}>Produit *</label>
             <Combobox<ProductItem>
-              items={products}
-              placeholder="Rechercher un produit…"
-              onSelect={pickProduct}
+              items={products} placeholder="Rechercher un produit…" onSelect={pickProduct}
               renderSub={p => `${p.unit_price.toLocaleString('fr-FR')} F${p.unit ? ' / ' + p.unit : ''} · Stock: ${p.quantity}`}
             />
           </div>
           <div>
             <label className={labelCls}>Quantité</label>
-            <input type="number" min="1" value={qty} onChange={e => setQty(Math.max(1, Number(e.target.value)))} className={inputCls} />
+            <input type="number" min="1" value={prodQty} onChange={e => setProdQty(Math.max(1, Number(e.target.value)))} className={inputCls} />
           </div>
         </div>
       )}
 
-      {/* Libre ou overrides */}
-      <div>
-        <label className={labelCls}>Désignation {mode !== 'libre' ? '(auto-remplie)' : '*'}</label>
-        <input
-          value={label}
-          onChange={e => setLabel(e.target.value)}
-          required={mode === 'libre'}
-          className={inputCls}
-          placeholder={mode === 'prestation' ? 'Sélectionnez une prestation ci-dessus' : mode === 'produit' ? 'Sélectionnez un produit ci-dessus' : 'Ex: Massage détente'}
-        />
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
+      {/* Désignation — produit et libre seulement */}
+      {mode !== 'prestation' && (
         <div>
-          <label className={labelCls}>Prix unitaire (F) *</label>
-          <input
-            type="number"
-            min="0"
-            value={amount}
-            onChange={e => setAmount(e.target.value)}
-            className={inputCls}
-            placeholder="0"
-          />
+          <label className={labelCls}>Désignation {mode === 'libre' ? '*' : '(auto-remplie)'}</label>
+          <input value={label} onChange={e => setLabel(e.target.value)} required={mode === 'libre'} className={inputCls}
+            placeholder={mode === 'produit' ? 'Sélectionnez un produit ci-dessus' : 'Ex: Massage détente'} />
         </div>
+      )}
+
+      {/* Prix + type */}
+      <div className="grid grid-cols-2 gap-3">
+        {mode !== 'prestation' && (
+          <div>
+            <label className={labelCls}>Prix unitaire (F) *</label>
+            <input type="number" min="0" value={amount} onChange={e => setAmount(e.target.value)} className={inputCls} placeholder="0" />
+          </div>
+        )}
         {mode === 'produit' && (
           <div>
             <label className={labelCls}>Total</label>
@@ -260,7 +344,7 @@ function TransactionForm({
           </div>
         )}
         {mode !== 'produit' && (
-          <div>
+          <div className={mode === 'prestation' ? 'col-span-2' : ''}>
             <label className={labelCls}>Type</label>
             <select value={txType} onChange={e => setTxType(e.target.value as 'recette' | 'charge')} className={inputCls}>
               <option value="recette">Recette</option>
@@ -270,6 +354,7 @@ function TransactionForm({
         )}
       </div>
 
+      {/* Paiement + catégorie */}
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className={labelCls}>Mode de paiement</label>
@@ -298,10 +383,12 @@ function TransactionForm({
       {error && <p className="rounded-md bg-rose-50 px-3 py-2 text-xs text-rose-600">{error}</p>}
 
       <div className="flex gap-2 pt-1">
-        <button type="button" onClick={onClose} className="flex-1 rounded-md border border-stone-200 py-2 text-sm font-medium text-slate-700 hover:bg-stone-50 cursor-pointer">
+        <button type="button" onClick={onClose}
+          className="flex-1 rounded-md border border-stone-200 py-2 text-sm font-medium text-slate-700 hover:bg-stone-50 cursor-pointer">
           Annuler
         </button>
-        <button type="submit" disabled={pending} className="flex-1 rounded-md bg-primary-600 py-2 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-60 cursor-pointer">
+        <button type="submit" disabled={pending}
+          className="flex-1 rounded-md bg-primary-600 py-2 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-60 cursor-pointer">
           {pending ? 'Enregistrement…' : 'Enregistrer'}
         </button>
       </div>

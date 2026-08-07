@@ -10,16 +10,26 @@ import { deleteServiceAction } from '@/app/actions/services'
 type Service = Database['public']['Tables']['services']['Row']
 
 const categoryColors: Record<string, string> = {
-  Massages:       'text-primary-600 bg-primary-50',
-  'Soins visage': 'text-pink-600 bg-pink-50',
-  'Soins corps':  'text-emerald-600 bg-emerald-50',
-  Beauté:         'text-purple-600 bg-purple-50',
-  Coiffure:       'text-amber-600 bg-amber-50',
-  Formules:       'text-rose-600 bg-rose-50',
-  Épilations:     'text-orange-600 bg-orange-50',
+  'Massages':             'text-primary-600 bg-primary-50',
+  'Soins visage':         'text-pink-600 bg-pink-50',
+  'Soins Wherteimar':     'text-violet-600 bg-violet-50',
+  'Extensions cils':      'text-indigo-600 bg-indigo-50',
+  'Mains & Pieds':        'text-teal-600 bg-teal-50',
+  'Onglerie':             'text-rose-600 bg-rose-50',
+  'Hammam & Gommage':     'text-amber-600 bg-amber-50',
+  'Minceur':              'text-emerald-600 bg-emerald-50',
+  'Formules':             'text-blue-600 bg-blue-50',
+  'Offres couple':        'text-fuchsia-600 bg-fuchsia-50',
+  'Soins événementiels':  'text-yellow-700 bg-yellow-50',
+  'Coiffure':             'text-orange-600 bg-orange-50',
+  'Épilations':           'text-red-600 bg-red-50',
 }
 
-const ALL_CATEGORIES = ['Tous', 'Massages', 'Soins visage', 'Soins corps', 'Beauté', 'Coiffure', 'Formules', 'Épilations']
+const ALL_CATEGORIES = [
+  'Tous', 'Massages', 'Soins visage', 'Soins Wherteimar', 'Extensions cils',
+  'Mains & Pieds', 'Onglerie', 'Hammam & Gommage', 'Minceur', 'Formules',
+  'Offres couple', 'Soins événementiels', 'Coiffure', 'Épilations',
+]
 
 function DeleteServiceButton({ id }: { id: string }) {
   const [pending, startTransition] = useTransition()
