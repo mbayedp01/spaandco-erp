@@ -17,9 +17,9 @@ export async function createServiceAction(formData: FormData): Promise<{ error?:
   if (!name || !category) return { error: 'Nom et catégorie requis' }
 
   const supabase = createServerClient()
-  const { error } = await supabase.from('services').insert({
-    name, category, description: description || null, duration, price, active, spa_id,
-  } as any)
+  const { error } = await (supabase.from('services') as any).insert({
+    name, category, description: description || null, duration, price, active,
+  })
   if (error) return { error: error.message }
   await logCurrentAction({ action: 'created', entity_type: 'service', entity_name: name, spa_id })
   revalidatePath('/services')
