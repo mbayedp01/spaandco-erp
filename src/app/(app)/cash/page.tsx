@@ -5,6 +5,7 @@ import { getClients } from '@/lib/db/clients'
 import { getServices } from '@/lib/db/services'
 import { getInventory } from '@/lib/db/inventory'
 import { getCurrentSpaId } from '@/lib/spa'
+import { getCurrentUserRole } from '@/lib/user-role'
 import { cn } from '@/lib/utils'
 import { TrendingUp, TrendingDown, Wallet } from 'lucide-react'
 import { AddTransactionButton, AddExpenseButton } from '@/components/forms/transaction-form'
@@ -57,10 +58,13 @@ export default async function CashPage({
 }) {
   const spaId  = getCurrentSpaId()
   const params = await searchParams
+  const role   = await getCurrentUserRole()
+  const isCaissier = role === 'caissier'
 
-  const period   = params.period   ?? 'all'
-  const type     = params.type     ?? 'all'
-  const caissier = params.caissier ?? 'all'
+  // Un caissier ne voit que la caisse du jour (recettes + dépenses)
+  const period   = isCaissier ? 'today' : (params.period ?? 'all')
+  const type     = params.type ?? 'all'
+  const caissier = isCaissier ? 'all'   : (params.caissier ?? 'all')
 
   const [allTransactions, allEstablishments, allClients, allServices, allInventory] = await Promise.all([
     getCashTransactions(spaId),
@@ -152,6 +156,7 @@ export default async function CashPage({
               type={type}
               caissier={caissier}
               caissiers={caissiers}
+              lockToday={isCaissier}
             />
           </div>
 
