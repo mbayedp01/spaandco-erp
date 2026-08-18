@@ -11,10 +11,10 @@ import { useSpa } from './spa-context'
 import { ROLE_LABELS, ROLE_COLORS } from '@/lib/roles'
 
 const ALL_PRIMARY_TABS = [
-  { label: 'Accueil', href: '/dashboard',    icon: LayoutDashboard, roles: ['admin','caissier','medecin'] },
-  { label: 'Clients', href: '/clients',       icon: Users,           roles: ['admin','caissier','medecin'] },
-  { label: 'RDV',     href: '/appointments',  icon: CalendarDays,    roles: ['admin','caissier','medecin'] },
-  { label: 'Caisse',  href: '/cash',          icon: CreditCard,      roles: ['admin','caissier'] },
+  { label: 'Accueil', href: '/dashboard',    icon: LayoutDashboard, roles: ['admin','caissier','comptable','medecin'] },
+  { label: 'Clients', href: '/clients',       icon: Users,           roles: ['admin','caissier','comptable','medecin'] },
+  { label: 'RDV',     href: '/appointments',  icon: CalendarDays,    roles: ['admin','caissier','comptable','medecin'] },
+  { label: 'Caisse',  href: '/cash',          icon: CreditCard,      roles: ['admin','caissier','comptable'] },
   { label: 'Soins',   href: '/services',      icon: Stethoscope,     roles: ['medecin'] },
 ] as const
 

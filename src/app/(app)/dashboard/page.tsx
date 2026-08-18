@@ -6,6 +6,7 @@ import { getTodayAppointments } from '@/lib/db/appointments'
 import { getRecentAuditLogs } from '@/lib/db/audit'
 import { getStaff } from '@/lib/db/staff'
 import { getCurrentSpaId } from '@/lib/spa'
+import { getCurrentUserRole } from '@/lib/user-role'
 import { cn } from '@/lib/utils'
 import {
   CalendarDays, Users, UserCheck, TrendingUp, TrendingDown,
@@ -46,18 +47,25 @@ function formatDelta(current: number, previous: number): { delta: string; trend:
 
 export default async function DashboardPage() {
   const spaId = getCurrentSpaId()
-  const [stats, todayAppointments, staff, recentLogs] = await Promise.all([
+  const [stats, todayAppointments, staff, recentLogs, role] = await Promise.all([
     getDashboardStats(spaId),
     getTodayAppointments(spaId),
     getStaff(spaId),
     getRecentAuditLogs(8, spaId),
+    getCurrentUserRole(),
   ])
 
   const activeStaff = staff.filter(s => s.status === 'active').length
   const caGrowth = formatDelta(stats.revenueMonth, stats.prevMonthRevenue)
 
+  // Le caissier voit le CA du jour (comme en caisse) au lieu du CA du mois
+  const isCaissier = role === 'caissier'
+  const caKpi = isCaissier
+    ? { label: 'CA du jour', value: `${stats.revenueToday.toLocaleString('fr-FR')} F`, delta: 'Encaissements du jour', trend: 'neutral' as const, sub: "Aujourd'hui" }
+    : { label: 'CA du mois', value: `${stats.revenueMonth.toLocaleString('fr-FR')} F`, ...caGrowth, sub: 'vs mois précédent' }
+
   const kpis = [
-    { label: 'CA du mois', value: `${stats.revenueMonth.toLocaleString('fr-FR')} F`, ...caGrowth, sub: 'vs mois précédent' },
+    caKpi,
     { label: 'Rendez-vous du jour', value: String(stats.totalAppointmentsToday), delta: `${stats.confirmedToday} confirmés`, trend: 'neutral' as const },
     { label: 'Nouveaux clients', value: String(stats.newClientsThisMonth), delta: `${stats.totalClients} total`, trend: 'neutral' as const, sub: 'Ce mois' },
     { label: 'Abonnements actifs', value: String(stats.activeSubscriptions), delta: '', trend: 'neutral' as const },

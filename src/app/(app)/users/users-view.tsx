@@ -7,8 +7,9 @@ import { createUserAction, updateUserRoleAction, deleteUserAction } from '@/app/
 import type { UserProfile } from '@/lib/db/users'
 
 const ROLE_OPTIONS = [
-  { value: 'admin',    label: 'Administrateur', color: 'bg-primary-50 text-primary-700' },
-  { value: 'caissier', label: 'Caissier',       color: 'bg-emerald-50 text-emerald-700' },
+  { value: 'admin',     label: 'Administrateur', color: 'bg-primary-50 text-primary-700' },
+  { value: 'caissier',  label: 'Caissier',       color: 'bg-emerald-50 text-emerald-700' },
+  { value: 'comptable', label: 'Comptable',      color: 'bg-blue-50 text-blue-700' },
 ]
 
 const inputCls = 'w-full rounded-md border border-stone-200 px-3 py-2 text-sm text-slate-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-primary-500'
@@ -317,8 +318,9 @@ export function UsersView({ users: initial, establishments }: { users: UserProfi
           <p className="mb-2 text-xs font-medium text-stone-500">Rôles disponibles</p>
           <div className="flex flex-wrap gap-3">
             {[
-              { role: 'admin',    desc: 'Accès complet à toutes les fonctionnalités' },
-              { role: 'caissier', desc: 'Caisse, stocks, prestations, RDV — restreint à son spa' },
+              { role: 'admin',     desc: 'Accès complet à toutes les fonctionnalités' },
+              { role: 'caissier',  desc: 'Caisse, stocks, prestations, RDV — restreint à son spa' },
+              { role: 'comptable', desc: 'Accès caissier + comptabilité et rapports' },
             ].map(({ role, desc }) => (
               <div key={role} className="flex items-center gap-2">
                 <span className={cn('rounded-full px-2 py-0.5 text-xs font-medium', getRoleColor(role))}>
