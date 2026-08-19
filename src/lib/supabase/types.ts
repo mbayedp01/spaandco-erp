@@ -134,6 +134,7 @@ export interface Database {
           type: string
           payment_method: string | null
           created_by: string | null
+          performed_by: string[] | null
           spa_id: string | null
           created_at: string
         }

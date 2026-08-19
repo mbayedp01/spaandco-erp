@@ -10,7 +10,7 @@ import { getCurrentUserRole } from '@/lib/user-role'
 import { cn } from '@/lib/utils'
 import {
   CalendarDays, Users, UserCheck, TrendingUp, TrendingDown,
-  Package, CreditCard, Activity, AlertTriangle,
+  Package, CreditCard, Activity, AlertTriangle, Award,
 } from 'lucide-react'
 
 const PIE_COLORS = ['#0D9488', '#14B8A6', '#5EEAD4', '#F59E0B', '#CBD5E1']
@@ -175,6 +175,54 @@ export default async function DashboardPage() {
             </div>
           </div>
         </div>
+
+        {/* ── Performance des praticiens (aide à la décision) ───────────────── */}
+        {!isCaissier && (
+          <div className="mt-6 rounded-lg border border-stone-200 bg-white shadow-xs">
+            <div className="flex items-center justify-between border-b border-stone-200 px-5 py-4">
+              <div className="flex items-center gap-2">
+                <Award className="h-4 w-4 text-primary-600" />
+                <h2 className="font-semibold text-slate-900">Performance des praticiens</h2>
+              </div>
+              <span className="text-xs text-stone-400">Ce mois · CA réparti si séance à plusieurs</span>
+            </div>
+            {stats.topPerformers.length === 0 ? (
+              <p className="px-5 py-8 text-center text-sm text-stone-400">
+                Aucune prestation attribuée à un praticien ce mois. La caisse permet d&apos;enregistrer qui a réalisé chaque prestation.
+              </p>
+            ) : (
+              <div className="divide-y divide-stone-100">
+                {stats.topPerformers.map((p, i) => {
+                  const maxRev = stats.topPerformers[0].revenue || 1
+                  const pct = Math.round((p.revenue / maxRev) * 100)
+                  return (
+                    <div key={p.name} className="flex items-center gap-4 px-5 py-3">
+                      <span className={cn(
+                        'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold',
+                        i === 0 ? 'bg-amber-100 text-amber-700'
+                          : i === 1 ? 'bg-stone-200 text-stone-600'
+                          : i === 2 ? 'bg-orange-100 text-orange-700'
+                          : 'bg-stone-100 text-stone-400',
+                      )}>
+                        {i + 1}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-slate-900 truncate">{p.name}</p>
+                        <div className="mt-1 h-1.5 w-full max-w-xs overflow-hidden rounded-full bg-stone-100">
+                          <div className="h-full rounded-full bg-primary-500" style={{ width: `${pct}%` }} />
+                        </div>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <p className="font-bold text-slate-900">{p.revenue.toLocaleString('fr-FR')} F</p>
+                        <p className="text-xs text-stone-400">{p.count} prestation{p.count > 1 ? 's' : ''}</p>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ── Grille : RDV du jour + Activités récentes ─────────────────────── */}
         <div className={cn('mt-6 grid gap-4', recentLogs.length > 0 ? 'grid-cols-1 lg:grid-cols-5' : 'grid-cols-1')}>

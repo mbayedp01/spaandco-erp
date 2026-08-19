@@ -18,6 +18,7 @@ export interface DashboardStats {
   activeSubscriptions: number
   monthlyData: { month: string; ca: number; depenses: number }[]
   topServices: { name: string; count: number; percent: number }[]
+  topPerformers: { name: string; count: number; revenue: number }[]
 }
 
 const MONTHS_FR = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc']
@@ -28,7 +29,7 @@ const EMPTY: DashboardStats = {
   completedToday: 0, cancelledToday: 0,
   revenueToday: 0, revenueMonth: 0, prevMonthRevenue: 0, expensesMonth: 0, profit: 0,
   lowStockCount: 0, outOfStockCount: 0, activeSubscriptions: 0,
-  monthlyData: [], topServices: [],
+  monthlyData: [], topServices: [], topPerformers: [],
 }
 
 export async function getDashboardStats(spaId: string | null): Promise<DashboardStats> {
@@ -130,6 +131,40 @@ export async function getDashboardStats(spaId: string | null): Promise<Dashboard
       .slice(0, 5)
       .map(([name, count]) => ({ name, count, percent: totalAppts > 0 ? Math.round((count / totalAppts) * 100) : 0 }))
 
+    // ── Performance des praticiens (mois en cours) ─────────────────────────────
+    // Requête séparée et tolérante : si la colonne performed_by n'existe pas encore
+    // (migration non appliquée), le KPI reste vide sans casser le reste du dashboard.
+    // Séance à plusieurs → le CA est réparti à parts égales entre les praticiens.
+    let topPerformers: { name: string; count: number; revenue: number }[] = []
+    try {
+      let qPerf = (supabase.from('cash_transactions') as any)
+        .select('amount, performed_by')
+        .eq('type', 'recette')
+        .gte('date', monthStart)
+        .not('performed_by', 'is', null)
+      if (spaId) qPerf = qPerf.eq('spa_id', spaId)
+      const { data: perfData, error: perfErr } = await qPerf
+      if (!perfErr && perfData) {
+        const perfMap = new Map<string, { count: number; revenue: number }>()
+        for (const tx of perfData as { amount: number; performed_by: string[] | null }[]) {
+          const people = (tx.performed_by ?? []).filter(Boolean)
+          if (people.length === 0) continue
+          const share = tx.amount / people.length
+          for (const name of people) {
+            const entry = perfMap.get(name) ?? { count: 0, revenue: 0 }
+            entry.count += 1
+            entry.revenue += share
+            perfMap.set(name, entry)
+          }
+        }
+        topPerformers = Array.from(perfMap.entries())
+          .map(([name, v]) => ({ name, count: v.count, revenue: Math.round(v.revenue) }))
+          .sort((a, b) => b.revenue - a.revenue)
+      }
+    } catch {
+      // colonne absente : KPI vide, dashboard intact
+    }
+
     return {
       totalClients:          totalClients ?? 0,
       newClientsThisMonth:   newClientsThisMonth ?? 0,
@@ -139,7 +174,7 @@ export async function getDashboardStats(spaId: string | null): Promise<Dashboard
       profit: revenueMonth - expensesMonth,
       lowStockCount, outOfStockCount,
       activeSubscriptions: activeSubscriptions ?? 0,
-      monthlyData, topServices,
+      monthlyData, topServices, topPerformers,
     }
   } catch (err) {
     console.error('getDashboardStats:', err)

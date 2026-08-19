@@ -4,11 +4,13 @@ import { getEstablishments } from '@/lib/db/establishments'
 import { getClients } from '@/lib/db/clients'
 import { getServices } from '@/lib/db/services'
 import { getInventory } from '@/lib/db/inventory'
+import { getStaff } from '@/lib/db/staff'
 import { getCurrentSpaId } from '@/lib/spa'
 import { getCurrentUserRole } from '@/lib/user-role'
 import { cn } from '@/lib/utils'
 import { TrendingUp, TrendingDown, Wallet } from 'lucide-react'
 import { AddTransactionButton, AddExpenseButton } from '@/components/forms/transaction-form'
+import { PerformerEditor } from '@/components/forms/performer-editor'
 import { PrintReceiptButton } from '@/components/receipts/print-receipt'
 import { CashFilterBar } from './filter-bar'
 
@@ -66,16 +68,18 @@ export default async function CashPage({
   const type     = params.type ?? 'all'
   const caissier = isCaissier ? 'all'   : (params.caissier ?? 'all')
 
-  const [allTransactions, allEstablishments, allClients, allServices, allInventory] = await Promise.all([
+  const [allTransactions, allEstablishments, allClients, allServices, allInventory, allStaff] = await Promise.all([
     getCashTransactions(spaId),
     getEstablishments(),
     getClients(spaId),
     getServices(),
     getInventory(spaId),
+    getStaff(spaId),
   ])
   const clients = allClients.map(c => ({ id: c.id, first_name: c.first_name, last_name: c.last_name, phone: c.phone }))
   const services = allServices.filter(s => s.active).map(s => ({ id: s.id, name: s.name, category: s.category, price: s.price ? Number(s.price) : null, duration: s.duration }))
   const products = allInventory.filter(i => i.unit_price != null).map(i => ({ id: i.id, name: i.name, unit_price: Number(i.unit_price), unit: i.unit, quantity: i.quantity }))
+  const staffNames = allStaff.filter(s => s.status === 'active').map(s => `${s.first_name} ${s.last_name}`)
 
   const transactions = applyFilters(allTransactions, period, type, caissier)
 
@@ -145,7 +149,7 @@ export default async function CashPage({
             </h2>
             <div className="flex items-center gap-2">
               <AddExpenseButton clients={clients} establishment={establishment} />
-              <AddTransactionButton clients={clients} services={services} products={products} establishment={establishment} />
+              <AddTransactionButton clients={clients} services={services} products={products} staffNames={staffNames} establishment={establishment} />
             </div>
           </div>
 
@@ -173,6 +177,13 @@ export default async function CashPage({
                   {t.category && <p className="text-xs text-stone-400">{t.category}</p>}
                   {(t as any).created_by && (
                     <p className="text-xs text-stone-300">{(t as any).created_by}</p>
+                  )}
+                  {t.type === 'recette' && (
+                    <PerformerEditor
+                      transactionId={t.id}
+                      performers={(t as any).performed_by ?? []}
+                      staffNames={staffNames}
+                    />
                   )}
                 </div>
                 {t.payment_method && (

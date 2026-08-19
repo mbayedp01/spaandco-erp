@@ -25,6 +25,7 @@ export async function addCashTransaction(payload: {
   date?: string
   spa_id?: string
   created_by?: string | null
+  performed_by?: string[]
 }): Promise<{ data?: CashTransaction; error?: string }> {
   const supabase = createServerClient()
   const { data, error } = await supabase
@@ -34,4 +35,17 @@ export async function addCashTransaction(payload: {
     .single()
   if (error) return { error: error.message }
   return { data: data as CashTransaction }
+}
+
+// Met à jour la liste des praticiens ayant réalisé la prestation (modifier / annuler)
+export async function updateTransactionPerformers(
+  id: string,
+  performers: string[],
+): Promise<{ error?: string }> {
+  const supabase = createServerClient()
+  const { error } = await (supabase.from('cash_transactions') as any)
+    .update({ performed_by: performers })
+    .eq('id', id)
+  if (error) return { error: error.message }
+  return {}
 }

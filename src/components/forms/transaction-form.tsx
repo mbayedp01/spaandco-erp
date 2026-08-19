@@ -151,11 +151,12 @@ interface SavedTx {
 }
 
 function TransactionForm({
-  clients, services, products, onClose, onSaved, defaultType = 'recette',
+  clients, services, products, staffNames, onClose, onSaved, defaultType = 'recette',
 }: {
   clients: ClientItem[]
   services: ServiceItem[]
   products: ProductItem[]
+  staffNames: string[]
   onClose: () => void
   onSaved: (tx: SavedTx) => void
   defaultType?: 'recette' | 'charge'
@@ -168,8 +169,13 @@ function TransactionForm({
   const [prodQty, setProdQty]     = useState(1)
   const [payMethod, setPayMethod] = useState('Cash')
   const [txType, setTxType]       = useState<'recette' | 'charge'>(defaultType)
+  const [performers, setPerformers] = useState<string[]>([])
   const [error, setError]         = useState('')
   const [pending, start]          = useTransition()
+
+  function togglePerformer(name: string) {
+    setPerformers(prev => prev.includes(name) ? prev.filter(n => n !== name) : [...prev, name])
+  }
 
   const [cart, setCart] = useState<CartLine[]>([])
   const cartTotal = cart.reduce((s, l) => s + (l.service.price ?? 0) * l.qty, 0)
@@ -207,6 +213,7 @@ function TransactionForm({
     setMode(m)
     setLabel(''); setAmount('')
     setCart([])
+    if (m !== 'prestation') setPerformers([])
     setCategory(m === 'produit' ? 'Stock' : m === 'libre' ? 'Divers' : 'Soins')
   }
 
@@ -223,6 +230,7 @@ function TransactionForm({
     fd.set('type',           txType)
     fd.set('payment_method', payMethod)
     fd.set('category',       category)
+    if (mode === 'prestation') performers.forEach(p => fd.append('performed_by', p))
 
     start(async () => {
       const result = await addTransactionAction(fd)
@@ -298,6 +306,39 @@ function TransactionForm({
               </li>
             </ul>
           )}
+
+          {/* Praticien(s) ayant réalisé la prestation — avant ou après la séance */}
+          <div className="mt-3">
+            <label className={labelCls}>
+              Praticien(s) <span className="font-normal text-stone-400">— qui a réalisé la prestation (modifiable)</span>
+            </label>
+            {staffNames.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5">
+                {staffNames.map(name => {
+                  const on = performers.includes(name)
+                  return (
+                    <button
+                      key={name} type="button" onClick={() => togglePerformer(name)}
+                      className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors cursor-pointer ${
+                        on
+                          ? 'border-primary-600 bg-primary-600 text-white'
+                          : 'border-stone-200 bg-white text-stone-600 hover:bg-stone-50'
+                      }`}
+                    >
+                      {name}
+                    </button>
+                  )
+                })}
+              </div>
+            ) : (
+              <p className="text-xs text-stone-400">Aucun praticien enregistré pour cet établissement.</p>
+            )}
+            {performers.length > 1 && (
+              <p className="mt-1.5 text-[11px] text-stone-400">
+                Séance réalisée à {performers.length} — le CA sera réparti entre les praticiens dans les statistiques.
+              </p>
+            )}
+          </div>
         </div>
       )}
 
@@ -399,11 +440,12 @@ function TransactionForm({
 // ─── Export ───────────────────────────────────────────────────────────────────
 
 function TransactionButton({
-  clients, services, products, establishment, defaultType, label: btnLabel, className,
+  clients, services, products, staffNames, establishment, defaultType, label: btnLabel, className,
 }: {
   clients: ClientItem[]
   services: ServiceItem[]
   products: ProductItem[]
+  staffNames: string[]
   establishment: ReceiptEstablishment
   defaultType?: 'recette' | 'charge'
   label: string
@@ -425,7 +467,7 @@ function TransactionButton({
 
       <Modal open={open} onClose={() => setOpen(false)} title={title}>
         <TransactionForm
-          clients={clients} services={services} products={products}
+          clients={clients} services={services} products={products} staffNames={staffNames}
           onClose={() => setOpen(false)} onSaved={handleSaved}
           defaultType={defaultType}
         />
@@ -444,17 +486,18 @@ function TransactionButton({
 }
 
 export function AddTransactionButton({
-  clients = [], services = [], products = [], establishment,
+  clients = [], services = [], products = [], staffNames = [], establishment,
 }: {
   clients?: ClientItem[]
   services?: ServiceItem[]
   products?: ProductItem[]
+  staffNames?: string[]
   establishment?: ReceiptEstablishment
 }) {
   const spa = establishment ?? { name: 'Spa and Co', city: 'Dakar', address: null, phone: null }
   return (
     <TransactionButton
-      clients={clients} services={services} products={products} establishment={spa}
+      clients={clients} services={services} products={products} staffNames={staffNames} establishment={spa}
       label="Ajouter"
       className="flex items-center gap-2 rounded-md bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700 cursor-pointer"
     />
@@ -470,7 +513,7 @@ export function AddExpenseButton({
   const spa = establishment ?? { name: 'Spa and Co', city: 'Dakar', address: null, phone: null }
   return (
     <TransactionButton
-      clients={clients} services={[]} products={[]} establishment={spa}
+      clients={clients} services={[]} products={[]} staffNames={[]} establishment={spa}
       defaultType="charge"
       label="Dépense"
       className="flex items-center gap-2 rounded-md border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-100 cursor-pointer"
