@@ -58,9 +58,10 @@ export default async function DashboardPage() {
   const activeStaff = staff.filter(s => s.status === 'active').length
   const caGrowth = formatDelta(stats.revenueMonth, stats.prevMonthRevenue)
 
-  // Le caissier voit le CA du jour (comme en caisse) au lieu du CA du mois
-  const isCaissier = role === 'caissier'
-  const caKpi = isCaissier
+  // Le caissier et le comptable voient le CA du jour (comme en caisse) au lieu du CA du mois
+  const isCaissier   = role === 'caissier'
+  const showDailyCa  = role === 'caissier' || role === 'comptable'
+  const caKpi = showDailyCa
     ? { label: 'CA du jour', value: `${stats.revenueToday.toLocaleString('fr-FR')} F`, delta: 'Encaissements du jour', trend: 'neutral' as const, sub: "Aujourd'hui" }
     : { label: 'CA du mois', value: `${stats.revenueMonth.toLocaleString('fr-FR')} F`, ...caGrowth, sub: 'vs mois précédent' }
 
