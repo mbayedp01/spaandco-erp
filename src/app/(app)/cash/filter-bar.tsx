@@ -1,10 +1,14 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useState } from 'react'
 import { Filter, CalendarClock } from 'lucide-react'
 
 const selectCls =
   'rounded-md border border-stone-200 bg-white px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-400 cursor-pointer hover:border-stone-300 transition-colors'
+
+const inputCls =
+  'rounded-md border border-stone-200 bg-white px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-400 hover:border-stone-300 transition-colors'
 
 interface Props {
   period: string
@@ -12,20 +16,47 @@ interface Props {
   caissier: string
   caissiers: string[]
   lockToday?: boolean
+  dateFrom?: string
+  dateTo?: string
 }
 
-export function CashFilterBar({ period, type, caissier, caissiers, lockToday = false }: Props) {
+export function CashFilterBar({ period, type, caissier, caissiers, lockToday = false, dateFrom, dateTo }: Props) {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const [localFrom, setLocalFrom] = useState(dateFrom ?? '')
+  const [localTo, setLocalTo]     = useState(dateTo ?? '')
 
-  function navigate(updates: Partial<Pick<Props, 'period' | 'type' | 'caissier'>>) {
-    const merged = { period, type, caissier, ...updates }
+  function navigate(updates: Record<string, string>) {
+    const merged: Record<string, string> = { period, type, caissier, ...updates }
     const params = new URLSearchParams()
-    // Le caissier est verrouillé sur le jour : on n'émet pas period/caissier
-    if (!lockToday && merged.period !== 'all')   params.set('period',   merged.period)
-    if (merged.type !== 'all')                   params.set('type',     merged.type)
+    if (!lockToday && merged.period !== 'all') params.set('period', merged.period)
+    if (merged.type !== 'all')                 params.set('type',   merged.type)
     if (!lockToday && merged.caissier !== 'all') params.set('caissier', merged.caissier)
+    if (merged.period === 'custom') {
+      if (merged.from) params.set('from', merged.from)
+      if (merged.to)   params.set('to',   merged.to)
+    }
     const qs = params.toString()
     router.push(`/cash${qs ? '?' + qs : ''}`)
+  }
+
+  function handlePeriodChange(val: string) {
+    if (val === 'custom') {
+      const today = new Date().toISOString().split('T')[0]
+      setLocalFrom(today)
+      setLocalTo(today)
+      navigate({ period: 'custom', from: today, to: today })
+    } else {
+      setLocalFrom('')
+      setLocalTo('')
+      navigate({ period: val })
+    }
+  }
+
+  function applyDateRange() {
+    if (localFrom) {
+      navigate({ period: 'custom', from: localFrom, to: localTo || localFrom })
+    }
   }
 
   const typeSelect = (
@@ -40,7 +71,6 @@ export function CashFilterBar({ period, type, caissier, caissiers, lockToday = f
     </select>
   )
 
-  // Vue caissier : uniquement la caisse du jour
   if (lockToday) {
     return (
       <div className="mb-5 flex flex-wrap items-center gap-2">
@@ -53,6 +83,8 @@ export function CashFilterBar({ period, type, caissier, caissiers, lockToday = f
     )
   }
 
+  const periodValue = period === 'custom' ? 'custom' : period
+  const showDateInputs = periodValue === 'custom'
   const hasFilters = period !== 'all' || type !== 'all' || caissier !== 'all'
 
   return (
@@ -60,15 +92,42 @@ export function CashFilterBar({ period, type, caissier, caissiers, lockToday = f
       <Filter className="h-4 w-4 shrink-0 text-stone-400" />
 
       <select
-        value={period}
-        onChange={(e) => navigate({ period: e.target.value })}
+        value={periodValue}
+        onChange={(e) => handlePeriodChange(e.target.value)}
         className={selectCls}
       >
         <option value="all">Toutes les dates</option>
         <option value="today">Aujourd&apos;hui</option>
+        <option value="yesterday">Hier</option>
         <option value="week">Cette semaine</option>
         <option value="month">Ce mois</option>
+        <option value="custom">Dates précises…</option>
       </select>
+
+      {showDateInputs && (
+        <>
+          <input
+            type="date"
+            value={localFrom}
+            onChange={(e) => setLocalFrom(e.target.value)}
+            className={inputCls}
+          />
+          <span className="text-xs text-stone-400">→</span>
+          <input
+            type="date"
+            value={localTo}
+            onChange={(e) => setLocalTo(e.target.value)}
+            className={inputCls}
+          />
+          <button
+            type="button"
+            onClick={applyDateRange}
+            className="rounded-md bg-primary-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-700 cursor-pointer"
+          >
+            Appliquer
+          </button>
+        </>
+      )}
 
       {typeSelect}
 
@@ -87,7 +146,11 @@ export function CashFilterBar({ period, type, caissier, caissiers, lockToday = f
 
       {hasFilters && (
         <button
-          onClick={() => navigate({ period: 'all', type: 'all', caissier: 'all' })}
+          onClick={() => {
+            setLocalFrom('')
+            setLocalTo('')
+            navigate({ period: 'all', type: 'all', caissier: 'all' })
+          }}
           className="text-xs text-stone-400 underline hover:text-rose-500 cursor-pointer"
         >
           Réinitialiser

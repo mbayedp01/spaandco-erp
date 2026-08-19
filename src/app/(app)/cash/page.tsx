@@ -25,13 +25,18 @@ const methodColor: Record<string, string> = {
 
 function applyFilters(
   txs: Awaited<ReturnType<typeof getCashTransactions>>,
-  period: string, type: string, caissier: string
+  period: string, type: string, caissier: string,
+  dateFrom?: string, dateTo?: string,
 ) {
   const today = new Date().toISOString().split('T')[0]
   let result = txs
 
   if (period === 'today') {
     result = result.filter((t) => t.date === today)
+  } else if (period === 'yesterday') {
+    const d = new Date(); d.setDate(d.getDate() - 1)
+    const yesterday = d.toISOString().split('T')[0]
+    result = result.filter((t) => t.date === yesterday)
   } else if (period === 'week') {
     const d = new Date(); d.setDate(d.getDate() - 7)
     const from = d.toISOString().split('T')[0]
@@ -40,6 +45,9 @@ function applyFilters(
     const d = new Date()
     const from = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`
     result = result.filter((t) => t.date >= from)
+  } else if (period === 'custom' && dateFrom) {
+    const to = dateTo || dateFrom
+    result = result.filter((t) => t.date >= dateFrom && t.date <= to)
   }
 
   if (type === 'recette' || type === 'charge') {
@@ -67,6 +75,8 @@ export default async function CashPage({
   const period   = isCaissier ? 'today' : (params.period ?? 'all')
   const type     = params.type ?? 'all'
   const caissier = isCaissier ? 'all'   : (params.caissier ?? 'all')
+  const dateFrom = params.from ?? ''
+  const dateTo   = params.to ?? ''
 
   const [allTransactions, allEstablishments, allClients, allServices, allInventory, allStaff] = await Promise.all([
     getCashTransactions(spaId),
@@ -81,7 +91,7 @@ export default async function CashPage({
   const products = allInventory.filter(i => i.unit_price != null).map(i => ({ id: i.id, name: i.name, unit_price: Number(i.unit_price), unit: i.unit, quantity: i.quantity }))
   const staffNames = allStaff.filter(s => s.status === 'active').map(s => `${s.first_name} ${s.last_name}`)
 
-  const transactions = applyFilters(allTransactions, period, type, caissier)
+  const transactions = applyFilters(allTransactions, period, type, caissier, dateFrom, dateTo)
 
   const establishment = allEstablishments.find((e) => e.id === spaId) ?? allEstablishments[0] ?? {
     name: 'Spa and Co', city: 'Dakar', address: null, phone: null,
@@ -161,6 +171,8 @@ export default async function CashPage({
               caissier={caissier}
               caissiers={caissiers}
               lockToday={isCaissier}
+              dateFrom={dateFrom}
+              dateTo={dateTo}
             />
           </div>
 
