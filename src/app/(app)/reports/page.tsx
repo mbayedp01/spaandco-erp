@@ -22,7 +22,7 @@ export default async function ReportsPage({
   const defaultFrom = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
   const defaultTo = now.toISOString().split('T')[0]
 
-  const selectedSpa = params.spa ?? (role === 'admin' ? 'all' : (defaultSpaId || 'all'))
+  const selectedSpa = params.spa ?? (defaultSpaId || 'all')
   const dateFrom = params.from ?? defaultFrom
   const dateTo = params.to ?? defaultTo
   const reportType = params.report ?? 'general'

@@ -33,7 +33,7 @@ export async function getReportData(
 
   const { data, error } = await query
   if (error) {
-    console.error('getReportData:', error.message)
+    console.error('getReportData error:', error.message)
     return empty()
   }
 
