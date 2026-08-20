@@ -32,7 +32,7 @@ export const navItems: NavItem[] = [
   { label: 'Abonnements',     href: '/subscriptions',  icon: BadgeCheck,                             roles: ['admin', 'caissier', 'comptable'] },
   { label: 'Rendez-vous',     href: '/appointments',   icon: CalendarDays,                           roles: ['admin', 'caissier', 'comptable'] },
   { label: 'Prestations',     href: '/services',       icon: Sparkles,                               roles: ['admin', 'caissier', 'comptable'] },
-  { label: 'Personnel',       href: '/staff',          icon: UserCheck,       section: 'Équipe & Stock', roles: ['admin'] },
+  { label: 'Personnel',       href: '/staff',          icon: UserCheck,       section: 'Équipe & Stock', roles: ['admin', 'comptable'] },
   { label: 'Planning',        href: '/planning',       icon: CalendarCheck,                          roles: ['admin'] },
   { label: 'Stocks',          href: '/inventory',      icon: Package,                                roles: ['admin', 'caissier', 'comptable'] },
   { label: 'Fournisseurs',    href: '/suppliers',      icon: Truck,                                  roles: ['admin', 'caissier', 'comptable'] },
