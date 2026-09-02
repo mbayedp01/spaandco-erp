@@ -1,9 +1,10 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { addCashTransaction, updateTransactionPerformers } from '@/lib/db/cash'
+import { addCashTransaction, updateTransactionPerformers, deleteCashTransaction } from '@/lib/db/cash'
 import { createServerClient } from '@/lib/supabase/server'
 import { getCurrentSpaId } from '@/lib/spa'
+import { getCurrentUserRole } from '@/lib/user-role'
 import { logCurrentAction } from '@/lib/audit'
 
 export async function addTransactionAction(formData: FormData): Promise<{ error?: string }> {
@@ -24,6 +25,31 @@ export async function addTransactionAction(formData: FormData): Promise<{ error?
   const result = await addCashTransaction({ label, category, amount, type, payment_method, created_by, spa_id, performed_by })
   if (result.error) return { error: result.error }
   await logCurrentAction({ action: 'created', entity_type: 'cash', entity_name: `${label} · ${amount.toLocaleString('fr-FR')} F`, spa_id })
+  revalidatePath('/cash')
+  revalidatePath('/accounting')
+  revalidatePath('/dashboard')
+  return {}
+}
+
+// Supprimer une transaction de caisse — réservé à l'administrateur
+export async function deleteTransactionAction(id: string): Promise<{ error?: string }> {
+  const role = await getCurrentUserRole()
+  if (role !== 'admin') return { error: 'Action réservée à l\'administrateur' }
+
+  const supabase = createServerClient()
+  const { data: tx } = await (supabase.from('cash_transactions') as any)
+    .select('label, amount').eq('id', id).single()
+
+  const result = await deleteCashTransaction(id)
+  if (result.error) return { error: result.error }
+
+  const spa_id = await getCurrentSpaId()
+  await logCurrentAction({
+    action: 'deleted',
+    entity_type: 'cash',
+    entity_name: tx ? `${tx.label} · ${Number(tx.amount).toLocaleString('fr-FR')} F` : id,
+    spa_id,
+  })
   revalidatePath('/cash')
   revalidatePath('/accounting')
   revalidatePath('/dashboard')

@@ -37,6 +37,14 @@ export async function addCashTransaction(payload: {
   return { data: data as CashTransaction }
 }
 
+// Supprime une transaction de caisse (réservé à l'admin)
+export async function deleteCashTransaction(id: string): Promise<{ error?: string }> {
+  const supabase = createServerClient()
+  const { error } = await (supabase.from('cash_transactions') as any).delete().eq('id', id)
+  if (error) return { error: error.message }
+  return {}
+}
+
 // Met à jour la liste des praticiens ayant réalisé la prestation (modifier / annuler)
 export async function updateTransactionPerformers(
   id: string,

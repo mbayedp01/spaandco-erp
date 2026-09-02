@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils'
 import { TrendingUp, TrendingDown, Wallet } from 'lucide-react'
 import { AddTransactionButton, AddExpenseButton } from '@/components/forms/transaction-form'
 import { PerformerEditor } from '@/components/forms/performer-editor'
+import { DeleteTransactionButton } from '@/components/forms/delete-transaction'
 import { PrintReceiptButton } from '@/components/receipts/print-receipt'
 import { CashFilterBar } from './filter-bar'
 
@@ -70,6 +71,7 @@ export default async function CashPage({
   const params = await searchParams
   const role   = await getCurrentUserRole()
   const isCaissier = role === 'caissier'
+  const isAdmin    = role === 'admin'
 
   // Un caissier ne voit que la caisse du jour (recettes + dépenses)
   const period   = isCaissier ? 'today' : (params.period ?? 'all')
@@ -213,6 +215,9 @@ export default async function CashPage({
                   {t.type === 'recette' ? '+' : '−'}{t.amount.toLocaleString('fr-FR')} F
                 </span>
                 <PrintReceiptButton transaction={t} establishment={establishment} />
+                {isAdmin && (
+                  <DeleteTransactionButton transactionId={t.id} label={t.label ?? 'Transaction'} amount={t.amount} />
+                )}
               </div>
             ))}
 
