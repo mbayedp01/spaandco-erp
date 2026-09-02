@@ -101,10 +101,10 @@ export function StaffBarChart({ data }: { data: { name: string; ca: number; coun
   )
 }
 
-export function ComptaBarChart() {
+export function ComptaBarChart({ data }: { data?: { month: string; ca: number; depenses: number }[] }) {
   return (
     <ResponsiveContainer width="100%" height={260}>
-      <BarChart data={revenueByMonth} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+      <BarChart data={data ?? revenueByMonth} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
         <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
         <YAxis tickFormatter={fmt} tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={44} />
@@ -120,16 +120,18 @@ export function ComptaBarChart() {
   )
 }
 
-export function ExpensePieChart() {
+export function ExpensePieChart({ data }: { data?: { name: string; amount: number; color?: string }[] }) {
+  const chartData = data && data.length > 0 ? data : expenseCategories
+  const total = chartData.reduce((s, e) => s + e.amount, 0) || 1
   return (
     <ResponsiveContainer width="100%" height={220}>
       <PieChart>
-        <Pie data={expenseCategories} cx="50%" cy="50%" innerRadius={52} outerRadius={82} paddingAngle={3} dataKey="percent" nameKey="name">
-          {expenseCategories.map((e, i) => (
-            <Cell key={i} fill={e.color} />
+        <Pie data={chartData} cx="50%" cy="50%" innerRadius={52} outerRadius={82} paddingAngle={3} dataKey="amount" nameKey="name">
+          {chartData.map((e, i) => (
+            <Cell key={i} fill={(e as any).color ?? PIE_COLORS[i % PIE_COLORS.length]} />
           ))}
         </Pie>
-        <Tooltip formatter={(v: number, name: string) => [`${v}%`, name]} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
+        <Tooltip formatter={(v: number, name: string) => [`${v.toLocaleString('fr-FR')} F (${Math.round((v / total) * 100)}%)`, name]} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
         <Legend iconType="circle" iconSize={8} formatter={(v) => <span style={{ fontSize: 11, color: '#64748b' }}>{v}</span>} />
       </PieChart>
     </ResponsiveContainer>

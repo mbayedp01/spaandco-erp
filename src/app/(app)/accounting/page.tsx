@@ -1,5 +1,4 @@
 import { Header } from '@/components/layout/header'
-import { expenseCategories } from '@/lib/mock-data'
 import { getCashTransactions } from '@/lib/db/cash'
 import { getCurrentSpaId } from '@/lib/spa'
 import { createServerClient } from '@/lib/supabase/server'
@@ -68,6 +67,17 @@ export default async function AccountingPage({
   const totalDep = filtered.filter(t => t.type === 'charge').reduce((s, t) => s + t.amount, 0)
   const profit   = totalCA - totalDep
   const marge    = totalCA > 0 ? Math.round((profit / totalCA) * 100) : 0
+
+  // Répartition des dépenses par catégorie (vraies charges du spa)
+  const EXPENSE_COLORS = ['#0D9488', '#F59E0B', '#F87171', '#A78BFA', '#38BDF8', '#CBD5E1']
+  const expMap = new Map<string, number>()
+  for (const t of filtered.filter(t => t.type === 'charge')) {
+    const cat = (t as any).category || 'Divers'
+    expMap.set(cat, (expMap.get(cat) ?? 0) + t.amount)
+  }
+  const expenseData = Array.from(expMap.entries())
+    .sort((a, b) => b[1] - a[1])
+    .map(([name, amount], i) => ({ name, amount, color: EXPENSE_COLORS[i % EXPENSE_COLORS.length] }))
 
   // Monthly data (12 months) for table + export
   const monthlyData = buildMonthlyData(transactions)
@@ -154,22 +164,28 @@ export default async function AccountingPage({
                 period={periodLabel}
               />
             </div>
-            <ComptaBarChart />
+            <ComptaBarChart data={monthlyData} />
           </div>
           <div className="rounded-lg border border-stone-200 bg-white p-5 shadow-xs">
             <h2 className="mb-1 font-semibold text-slate-900">Répartition dépenses</h2>
-            <ExpensePieChart />
-            <div className="mt-2 space-y-1.5">
-              {expenseCategories.map((e) => (
-                <div key={e.name} className="flex items-center justify-between text-xs">
-                  <span className="flex items-center gap-1.5">
-                    <span className="inline-block h-2 w-2 rounded-full" style={{ background: e.color }} />
-                    <span className="text-stone-600">{e.name}</span>
-                  </span>
-                  <span className="font-medium text-slate-900">{e.amount.toLocaleString('fr-FR')} F</span>
+            {expenseData.length > 0 ? (
+              <>
+                <ExpensePieChart data={expenseData} />
+                <div className="mt-2 space-y-1.5">
+                  {expenseData.map((e) => (
+                    <div key={e.name} className="flex items-center justify-between text-xs">
+                      <span className="flex items-center gap-1.5">
+                        <span className="inline-block h-2 w-2 rounded-full" style={{ background: e.color }} />
+                        <span className="text-stone-600">{e.name}</span>
+                      </span>
+                      <span className="font-medium text-slate-900">{e.amount.toLocaleString('fr-FR')} F</span>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </>
+            ) : (
+              <p className="py-12 text-center text-sm text-stone-400">Aucune dépense sur cette période.</p>
+            )}
           </div>
         </div>
 
