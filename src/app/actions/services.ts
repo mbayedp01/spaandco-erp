@@ -18,7 +18,7 @@ export async function createServiceAction(formData: FormData): Promise<{ error?:
 
   const supabase = createServerClient()
   const { error } = await (supabase.from('services') as any).insert({
-    name, category, description: description || null, duration, price, active,
+    name, category, description: description || null, duration, price, active, spa_id,
   })
   if (error) return { error: error.message }
   await logCurrentAction({ action: 'created', entity_type: 'service', entity_name: name, spa_id })

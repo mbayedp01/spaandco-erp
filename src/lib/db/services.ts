@@ -3,9 +3,11 @@ import type { Database } from '@/lib/supabase/types'
 
 type Service = Database['public']['Tables']['services']['Row']
 
-export async function getServices(_spaId?: string): Promise<Service[]> {
+export async function getServices(spaId?: string): Promise<Service[]> {
   const supabase = createServerClient()
-  const { data, error } = await supabase.from('services').select('*').order('category').order('name')
+  let query = supabase.from('services').select('*').order('category').order('name')
+  if (spaId) query = query.eq('spa_id', spaId)
+  const { data, error } = await query
   if (error) console.error('getServices:', error.message)
   return (data as Service[] | null) ?? []
 }

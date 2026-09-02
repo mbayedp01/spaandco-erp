@@ -82,7 +82,7 @@ export default async function CashPage({
     getCashTransactions(spaId),
     getEstablishments(),
     getClients(spaId),
-    getServices(),
+    getServices(spaId),
     getInventory(spaId),
     getStaff(spaId),
   ])
