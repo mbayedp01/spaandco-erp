@@ -4,7 +4,7 @@ import { Header } from '@/components/layout/header'
 import { ServicesView } from './services-view'
 
 export default async function ServicesPage() {
-  const spaId    = getCurrentSpaId()
+  const spaId    = await getCurrentSpaId()
   const services = await getServices(spaId)
   return (
     <>

@@ -12,7 +12,7 @@ export async function createServiceAction(formData: FormData): Promise<{ error?:
   const duration    = Number(formData.get('duration'))   || 60
   const price       = Number(formData.get('price'))      || 0
   const active      = formData.get('active') !== 'false'
-  const spa_id      = getCurrentSpaId()
+  const spa_id      = await getCurrentSpaId()
 
   if (!name || !category) return { error: 'Nom et catégorie requis' }
 

@@ -239,7 +239,7 @@ function AdminCaissierView({
 // ─── Page entry point ─────────────────────────────────────────────────────────
 
 export default async function PlanningPage() {
-  const spaId = getCurrentSpaId()
+  const spaId = await getCurrentSpaId()
   const [userRole, staffList, services, clients] = await Promise.all([
     getCurrentUserRole(),
     getStaff(spaId),

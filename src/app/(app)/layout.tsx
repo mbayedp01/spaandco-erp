@@ -8,7 +8,7 @@ import { getCurrentUserRole, getCurrentUserSpaId } from '@/lib/user-role'
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const [allEstablishments, currentSpaId, userRole, userSpaId] = await Promise.all([
     getEstablishments(),
-    Promise.resolve(getCurrentSpaId()),
+    getCurrentSpaId(),
     getCurrentUserRole(),
     getCurrentUserSpaId(),
   ])

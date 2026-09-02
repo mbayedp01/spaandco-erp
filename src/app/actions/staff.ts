@@ -9,7 +9,7 @@ import type { Database } from '@/lib/supabase/types'
 type StaffMember = Database['public']['Tables']['staff']['Row']
 
 export async function createStaffAction(formData: FormData): Promise<{ error?: string }> {
-  const spaId      = getCurrentSpaId()
+  const spaId      = await getCurrentSpaId()
   const first_name = String(formData.get('first_name') ?? '').trim()
   const last_name  = String(formData.get('last_name')  ?? '').trim()
   const email      = String(formData.get('email')      ?? '').trim()

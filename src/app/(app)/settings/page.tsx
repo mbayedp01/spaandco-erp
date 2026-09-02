@@ -7,7 +7,7 @@ import { getCurrentUserRole } from '@/lib/user-role'
 import { getAppUsers } from '@/lib/db/users'
 
 export default async function SettingsPage() {
-  const currentSpaId = getCurrentSpaId()
+  const currentSpaId = await getCurrentSpaId()
 
   const [establishments, logs, role, users] = await Promise.all([
     getEstablishments(),

@@ -4,7 +4,7 @@ import { Header } from '@/components/layout/header'
 import { ClientsView } from './clients-view'
 
 export default async function ClientsPage() {
-  const spaId = getCurrentSpaId()
+  const spaId = await getCurrentSpaId()
   const clients = await getClients(spaId)
   return (
     <>

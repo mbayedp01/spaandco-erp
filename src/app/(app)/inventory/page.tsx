@@ -16,7 +16,7 @@ const categoryColor: Record<string, string> = {
 }
 
 export default async function InventoryPage() {
-  const spaId = getCurrentSpaId()
+  const spaId = await getCurrentSpaId()
   const [items, suppliers] = await Promise.all([
     getInventory(spaId),
     getSuppliers(spaId),

@@ -16,7 +16,7 @@ export async function createClientAction(formData: FormData): Promise<{ error?: 
 
   if (!first_name || !last_name) return { error: 'Prénom et nom requis' }
 
-  const spa_id = getCurrentSpaId()
+  const spa_id = await getCurrentSpaId()
   const result = await createClient({ first_name, last_name, email: email || null, phone: phone || null, birth_date, spa_id })
   if (result.error) {
     if (result.error.includes('clients_email_spa_key') || result.error.includes('unique'))

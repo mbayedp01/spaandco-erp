@@ -64,7 +64,7 @@ export async function logCurrentAction(params: {
 
     const actor_email = user?.email ?? 'admin@dev.local'
     const actor_role  = (user?.user_metadata?.role as string) ?? 'admin'
-    const spa_id = params.spa_id !== undefined ? params.spa_id : (getCurrentSpaId() ?? null)
+    const spa_id = params.spa_id !== undefined ? params.spa_id : (await getCurrentSpaId() ?? null)
 
     await logAction({
       actor_email,

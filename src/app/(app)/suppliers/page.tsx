@@ -21,7 +21,7 @@ const categoryColor: Record<string, string> = {
 }
 
 export default async function SuppliersPage() {
-  const spaId = getCurrentSpaId()
+  const spaId = await getCurrentSpaId()
   const suppliers = await getSuppliers(spaId)
   const actifs = suppliers.filter((s) => s.status === 'actif')
 

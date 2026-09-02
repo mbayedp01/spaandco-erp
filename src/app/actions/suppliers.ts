@@ -6,7 +6,7 @@ import { getCurrentSpaId } from '@/lib/spa'
 import { logCurrentAction } from '@/lib/audit'
 
 export async function createSupplierAction(formData: FormData): Promise<{ error?: string }> {
-  const spaId         = getCurrentSpaId()
+  const spaId         = await getCurrentSpaId()
   const name          = String(formData.get('name')          ?? '').trim()
   const category      = String(formData.get('category')      ?? '').trim()
   const contact       = String(formData.get('contact')       ?? '').trim()

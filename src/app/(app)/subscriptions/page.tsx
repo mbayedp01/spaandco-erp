@@ -23,7 +23,7 @@ const planBadge: Record<string, string> = {
 }
 
 export default async function SubscriptionsPage() {
-  const spaId = getCurrentSpaId()
+  const spaId = await getCurrentSpaId()
   const [plans, memberships, clients, role] = await Promise.all([
     getMembershipPlans(spaId),
     getMemberships(),

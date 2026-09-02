@@ -22,7 +22,7 @@ const statusLabel: Record<string, string> = {
 }
 
 export default async function AppointmentsPage() {
-  const spaId = getCurrentSpaId()
+  const spaId = await getCurrentSpaId()
   const [userRole, staffList, services, clients] = await Promise.all([
     getCurrentUserRole(),
     getStaff(spaId),

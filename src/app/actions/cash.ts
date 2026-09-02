@@ -19,7 +19,7 @@ export async function addTransactionAction(formData: FormData): Promise<{ error?
   const supabase  = createServerClient()
   const { data: { user } } = await supabase.auth.getUser()
   const created_by = user?.user_metadata?.name ?? user?.email ?? null
-  const spa_id     = getCurrentSpaId()
+  const spa_id     = await getCurrentSpaId()
 
   const result = await addCashTransaction({ label, category, amount, type, payment_method, created_by, spa_id, performed_by })
   if (result.error) return { error: result.error }
@@ -38,7 +38,7 @@ export async function setTransactionPerformersAction(
   const clean = performers.map(s => s.trim()).filter(Boolean)
   const result = await updateTransactionPerformers(id, clean)
   if (result.error) return { error: result.error }
-  const spa_id = getCurrentSpaId()
+  const spa_id = await getCurrentSpaId()
   await logCurrentAction({
     action: 'updated',
     entity_type: 'cash',

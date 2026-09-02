@@ -6,7 +6,7 @@ import { getCurrentSpaId } from '@/lib/spa'
 import { logCurrentAction } from '@/lib/audit'
 
 export async function createAppointmentAction(formData: FormData): Promise<{ error?: string }> {
-  const spaId        = getCurrentSpaId()
+  const spaId        = await getCurrentSpaId()
   const client_name  = String(formData.get('client_name')  ?? '').trim()
   const staff_name   = String(formData.get('staff_name')   ?? '').trim()
   const service_name = String(formData.get('service_name') ?? '').trim()

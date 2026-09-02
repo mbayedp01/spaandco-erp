@@ -41,7 +41,7 @@ export default async function AccountingPage({
 }: {
   searchParams: Promise<Record<string, string>>
 }) {
-  const spaId  = getCurrentSpaId()
+  const spaId  = await getCurrentSpaId()
   const supabase = createServerClient()
   const params = await searchParams
 

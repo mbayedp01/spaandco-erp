@@ -20,7 +20,7 @@ const roleColor: Record<string, string> = {
 }
 
 export default async function StaffPage() {
-  const spaId = getCurrentSpaId()
+  const spaId = await getCurrentSpaId()
   const [staffList, todayAppts] = await Promise.all([getStaff(spaId), getTodayAppointments(spaId)])
 
   const rdvCounts: Record<string, number> = {}

@@ -46,7 +46,7 @@ function formatDelta(current: number, previous: number): { delta: string; trend:
 }
 
 export default async function DashboardPage() {
-  const spaId = getCurrentSpaId()
+  const spaId = await getCurrentSpaId()
   const [stats, todayAppointments, staff, recentLogs, role] = await Promise.all([
     getDashboardStats(spaId),
     getTodayAppointments(spaId),

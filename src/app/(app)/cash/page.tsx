@@ -66,7 +66,7 @@ export default async function CashPage({
 }: {
   searchParams: Promise<Record<string, string>>
 }) {
-  const spaId  = getCurrentSpaId()
+  const spaId  = await getCurrentSpaId()
   const params = await searchParams
   const role   = await getCurrentUserRole()
   const isCaissier = role === 'caissier'

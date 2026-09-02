@@ -15,7 +15,7 @@ export default async function ReportsPage({
 }) {
   const params = await searchParams
   const role = await getCurrentUserRole()
-  const defaultSpaId = getCurrentSpaId()
+  const defaultSpaId = await getCurrentSpaId()
   const establishments = await getEstablishments()
 
   const now = new Date()

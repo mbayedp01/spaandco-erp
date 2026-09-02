@@ -29,7 +29,7 @@ export interface PlanFormData {
 export async function createPlanAction(data: PlanFormData): Promise<{ error?: string }> {
   await requireAdmin()
   const supabase = createServerClient()
-  const spaId = getCurrentSpaId()
+  const spaId = await getCurrentSpaId()
   const { error } = await (supabase.from('membership_plans') as any).insert({ ...data, spa_id: spaId })
   if (error) return { error: error.message }
   await logCurrentAction({ action: 'created', entity_type: 'plan', entity_name: data.name, spa_id: spaId })
