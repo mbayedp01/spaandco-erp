@@ -200,7 +200,18 @@ export default async function CashPage({
                     />
                   )}
                 </div>
-                {t.payment_method && (
+                {(t as any).payment_splits && (t as any).payment_splits.length > 0 ? (
+                  <div className="hidden shrink-0 flex-col items-end gap-0.5 sm:flex" title="Paiement réparti">
+                    {(t as any).payment_splits.map((s: { method: string; amount: number }, i: number) => (
+                      <span key={i} className={cn(
+                        'rounded-full px-2 py-0.5 text-[10px] font-medium',
+                        methodColor[s.method] ?? 'bg-stone-100 text-stone-600'
+                      )}>
+                        {s.method} · {s.amount.toLocaleString('fr-FR')} F
+                      </span>
+                    ))}
+                  </div>
+                ) : t.payment_method && (
                   <span className={cn(
                     'hidden shrink-0 rounded-full px-2 py-0.5 text-xs font-medium sm:inline',
                     methodColor[t.payment_method] ?? 'bg-stone-100 text-stone-600'

@@ -24,7 +24,7 @@ export async function getReportData(
   const supabase = createServerClient()
 
   let query = (supabase.from('cash_transactions') as any)
-    .select('date, amount, type, label, category, payment_method, performed_by')
+    .select('date, amount, type, label, category, payment_method, payment_splits, performed_by')
     .gte('date', dateFrom)
     .lte('date', dateTo)
     .order('date', { ascending: true })
@@ -108,11 +108,18 @@ export async function getReportData(
     .map(([name, v]) => ({ name, ca: Math.round(v.ca), count: v.count }))
     .sort((a, b) => b.ca - a.ca)
 
-  // Payment methods
+  // Payment methods — utilise la répartition détaillée quand elle existe
   const pmMap = new Map<string, number>()
   for (const tx of recettes) {
-    const method = tx.payment_method || 'Autre'
-    pmMap.set(method, (pmMap.get(method) ?? 0) + tx.amount)
+    const tSplits = (tx as any).payment_splits as { method: string; amount: number }[] | null
+    if (tSplits && tSplits.length > 0) {
+      for (const s of tSplits) {
+        pmMap.set(s.method, (pmMap.get(s.method) ?? 0) + s.amount)
+      }
+    } else {
+      const method = tx.payment_method || 'Autre'
+      pmMap.set(method, (pmMap.get(method) ?? 0) + tx.amount)
+    }
   }
   const paymentMethods = Array.from(pmMap.entries())
     .sort((a, b) => b[1] - a[1])

@@ -13,6 +13,9 @@ export type ProductItem   = { id: string; name: string; unit_price: number; unit
 
 type Mode = 'prestation' | 'produit' | 'libre'
 interface CartLine { service: ServiceItem; qty: number }
+interface PaySplit { method: string; amount: string }
+
+const PAYMENT_METHODS = ['Cash', 'Wave', 'Orange Money', 'Carte', 'Mobile Money', 'Virement']
 
 const inputCls = 'w-full rounded-md border border-stone-200 px-3 py-2 text-sm text-slate-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-primary-500'
 const labelCls = 'block text-xs font-medium text-stone-600 mb-1'
@@ -168,6 +171,8 @@ function TransactionForm({
   const [category, setCategory]   = useState(defaultType === 'charge' ? 'Charges' : 'Soins')
   const [prodQty, setProdQty]     = useState(1)
   const [payMethod, setPayMethod] = useState('Cash')
+  const [splitPay, setSplitPay]   = useState(false)
+  const [splits, setSplits]       = useState<PaySplit[]>([{ method: 'Cash', amount: '' }, { method: 'Wave', amount: '' }])
   const [txType, setTxType]       = useState<'recette' | 'charge'>(defaultType)
   const [performers, setPerformers] = useState<string[]>([])
   const [error, setError]         = useState('')
@@ -209,6 +214,9 @@ function TransactionForm({
   const finalLabel = mode === 'prestation' ? cartLabel : label
   const fullLabel  = clientName ? `${clientName} — ${finalLabel || '—'}` : (finalLabel || '')
 
+  const splitsTotal = splits.reduce((s, l) => s + (Number(l.amount) || 0), 0)
+  const splitsRemaining = totalAmount - splitsTotal
+
   function switchMode(m: Mode) {
     setMode(m)
     setLabel(''); setAmount('')
@@ -217,25 +225,52 @@ function TransactionForm({
     setCategory(m === 'produit' ? 'Stock' : m === 'libre' ? 'Divers' : 'Soins')
   }
 
+  function addSplitLine() {
+    const unused = PAYMENT_METHODS.find(m => !splits.some(s => s.method === m)) ?? PAYMENT_METHODS[0]
+    setSplits(prev => [...prev, { method: unused, amount: '' }])
+  }
+  function removeSplitLine(i: number) {
+    setSplits(prev => prev.filter((_, idx) => idx !== i))
+  }
+  function updateSplitLine(i: number, patch: Partial<PaySplit>) {
+    setSplits(prev => prev.map((s, idx) => idx === i ? { ...s, ...patch } : s))
+  }
+  function fillRemaining(i: number) {
+    const others = splits.reduce((s, l, idx) => idx === i ? s : s + (Number(l.amount) || 0), 0)
+    const rest = Math.max(0, totalAmount - others)
+    updateSplitLine(i, { amount: rest ? String(rest) : '' })
+  }
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
     if (mode === 'prestation' && cart.length === 0) { setError('Ajoutez au moins une prestation.'); return }
     if (mode !== 'prestation' && !label.trim()) { setError('Veuillez sélectionner ou saisir une désignation.'); return }
     if (!totalAmount) { setError('Le montant est requis.'); return }
+    if (splitPay && Math.abs(splitsRemaining) > 0.01) {
+      setError(`La répartition ne correspond pas au total (reste ${splitsRemaining.toLocaleString('fr-FR')} F).`)
+      return
+    }
 
     const fd = new FormData()
     fd.set('label',          fullLabel)
     fd.set('amount',         String(totalAmount))
     fd.set('type',           txType)
-    fd.set('payment_method', payMethod)
     fd.set('category',       category)
     if (mode === 'prestation') performers.forEach(p => fd.append('performed_by', p))
+
+    let effectivePayMethod = payMethod
+    if (splitPay) {
+      const clean = splits.filter(s => s.method && Number(s.amount) > 0)
+      fd.set('payment_splits', JSON.stringify(clean.map(s => ({ method: s.method, amount: Number(s.amount) }))))
+      effectivePayMethod = clean.length > 1 ? 'Mixte' : (clean[0]?.method ?? payMethod)
+    }
+    fd.set('payment_method', effectivePayMethod)
 
     start(async () => {
       const result = await addTransactionAction(fd)
       if (result.error) { setError(result.error); return }
-      onSaved({ label: fullLabel, amount: totalAmount, type: txType, payment_method: payMethod, category, client_name: clientName, date: new Date().toISOString().split('T')[0] })
+      onSaved({ label: fullLabel, amount: totalAmount, type: txType, payment_method: effectivePayMethod, category, client_name: clientName, date: new Date().toISOString().split('T')[0] })
     })
   }
 
@@ -395,30 +430,78 @@ function TransactionForm({
         )}
       </div>
 
-      {/* Paiement + catégorie */}
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className={labelCls}>Mode de paiement</label>
+      {/* Paiement */}
+      <div>
+        <div className="mb-1 flex items-center justify-between">
+          <label className={labelCls + ' mb-0'}>Mode de paiement</label>
+          {totalAmount > 0 && (
+            <label className="flex items-center gap-1.5 text-xs font-medium text-stone-500 cursor-pointer">
+              <input
+                type="checkbox" checked={splitPay}
+                onChange={e => setSplitPay(e.target.checked)}
+                className="h-3.5 w-3.5 rounded border-stone-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
+              />
+              Paiement mixte (plusieurs modes)
+            </label>
+          )}
+        </div>
+
+        {!splitPay ? (
           <select value={payMethod} onChange={e => setPayMethod(e.target.value)} className={inputCls}>
-            <option value="Cash">Cash</option>
-            <option value="Wave">Wave</option>
-            <option value="Orange Money">Orange Money</option>
-            <option value="Carte">Carte</option>
-            <option value="Mobile Money">Mobile Money</option>
-            <option value="Virement">Virement</option>
+            {PAYMENT_METHODS.map(m => <option key={m} value={m}>{m}</option>)}
           </select>
-        </div>
-        <div>
-          <label className={labelCls}>Catégorie</label>
-          <select value={category} onChange={e => setCategory(e.target.value)} className={inputCls}>
-            <option value="Soins">Soins</option>
-            <option value="Beauté">Beauté</option>
-            <option value="Abonnements">Abonnements</option>
-            <option value="Stock">Stock</option>
-            <option value="Charges">Charges</option>
-            <option value="Divers">Divers</option>
-          </select>
-        </div>
+        ) : (
+          <div className="space-y-1.5 rounded-md border border-stone-200 bg-stone-50 p-2">
+            {splits.map((s, i) => (
+              <div key={i} className="flex items-center gap-1.5">
+                <select
+                  value={s.method}
+                  onChange={e => updateSplitLine(i, { method: e.target.value })}
+                  className="rounded-md border border-stone-200 bg-white px-2 py-1.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                >
+                  {PAYMENT_METHODS.map(m => <option key={m} value={m}>{m}</option>)}
+                </select>
+                <input
+                  type="number" min="0" value={s.amount}
+                  onChange={e => updateSplitLine(i, { amount: e.target.value })}
+                  placeholder="Montant"
+                  className="w-24 flex-1 rounded-md border border-stone-200 bg-white px-2 py-1.5 text-xs text-slate-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+                <button type="button" onClick={() => fillRemaining(i)}
+                  className="shrink-0 rounded-md border border-stone-200 bg-white px-1.5 py-1.5 text-[10px] font-medium text-stone-500 hover:bg-stone-100 cursor-pointer">
+                  Reste
+                </button>
+                {splits.length > 1 && (
+                  <button type="button" onClick={() => removeSplitLine(i)}
+                    className="shrink-0 text-stone-300 hover:text-rose-500 cursor-pointer">
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+            ))}
+            <button type="button" onClick={addSplitLine}
+              className="text-xs font-medium text-primary-600 hover:text-primary-700 cursor-pointer">
+              + Ajouter un mode de paiement
+            </button>
+            <div className={`flex items-center justify-between border-t border-stone-200 pt-1.5 text-xs font-medium ${Math.abs(splitsRemaining) > 0.01 ? 'text-rose-600' : 'text-emerald-600'}`}>
+              <span>Réparti : {splitsTotal.toLocaleString('fr-FR')} F / {totalAmount.toLocaleString('fr-FR')} F</span>
+              <span>{Math.abs(splitsRemaining) > 0.01 ? `Reste ${splitsRemaining.toLocaleString('fr-FR')} F` : '✓ Complet'}</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Catégorie */}
+      <div>
+        <label className={labelCls}>Catégorie</label>
+        <select value={category} onChange={e => setCategory(e.target.value)} className={inputCls}>
+          <option value="Soins">Soins</option>
+          <option value="Beauté">Beauté</option>
+          <option value="Abonnements">Abonnements</option>
+          <option value="Stock">Stock</option>
+          <option value="Charges">Charges</option>
+          <option value="Divers">Divers</option>
+        </select>
       </div>
 
       {error && <p className="rounded-md bg-rose-50 px-3 py-2 text-xs text-rose-600">{error}</p>}

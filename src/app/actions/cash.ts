@@ -8,21 +8,43 @@ import { getCurrentUserRole } from '@/lib/user-role'
 import { logCurrentAction } from '@/lib/audit'
 
 export async function addTransactionAction(formData: FormData): Promise<{ error?: string }> {
-  const label          = String(formData.get('label')          ?? '').trim()
-  const category       = String(formData.get('category')       ?? 'Divers').trim()
-  const amount         = Number(formData.get('amount'))
-  const type           = String(formData.get('type')) as 'recette' | 'charge'
-  const payment_method = String(formData.get('payment_method') ?? 'Cash').trim()
-  const performed_by   = (formData.getAll('performed_by') as string[]).map(s => s.trim()).filter(Boolean)
+  const label            = String(formData.get('label')          ?? '').trim()
+  const category         = String(formData.get('category')       ?? 'Divers').trim()
+  const amount           = Number(formData.get('amount'))
+  const type             = String(formData.get('type')) as 'recette' | 'charge'
+  const performed_by     = (formData.getAll('performed_by') as string[]).map(s => s.trim()).filter(Boolean)
+  const splitsRaw        = String(formData.get('payment_splits') ?? '')
 
   if (!label || !amount || !type) return { error: 'Champs requis manquants' }
+
+  let payment_method = String(formData.get('payment_method') ?? 'Cash').trim()
+  let payment_splits: { method: string; amount: number }[] | undefined
+
+  if (splitsRaw) {
+    try {
+      const parsed = JSON.parse(splitsRaw) as { method: string; amount: number }[]
+      const clean = parsed
+        .map(s => ({ method: String(s.method).trim(), amount: Number(s.amount) }))
+        .filter(s => s.method && s.amount > 0)
+      if (clean.length > 0) {
+        const sum = clean.reduce((s, l) => s + l.amount, 0)
+        if (Math.abs(sum - amount) > 0.01) {
+          return { error: `La répartition (${sum.toLocaleString('fr-FR')} F) ne correspond pas au montant total (${amount.toLocaleString('fr-FR')} F).` }
+        }
+        payment_splits = clean
+        payment_method = clean.length > 1 ? 'Mixte' : clean[0].method
+      }
+    } catch {
+      return { error: 'Répartition de paiement invalide' }
+    }
+  }
 
   const supabase  = createServerClient()
   const { data: { user } } = await supabase.auth.getUser()
   const created_by = user?.user_metadata?.name ?? user?.email ?? null
   const spa_id     = await getCurrentSpaId()
 
-  const result = await addCashTransaction({ label, category, amount, type, payment_method, created_by, spa_id, performed_by })
+  const result = await addCashTransaction({ label, category, amount, type, payment_method, payment_splits, created_by, spa_id, performed_by })
   if (result.error) return { error: result.error }
   await logCurrentAction({ action: 'created', entity_type: 'cash', entity_name: `${label} · ${amount.toLocaleString('fr-FR')} F`, spa_id })
   revalidatePath('/cash')

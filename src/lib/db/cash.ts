@@ -22,6 +22,7 @@ export async function addCashTransaction(payload: {
   amount: number
   type: 'recette' | 'charge'
   payment_method: string
+  payment_splits?: { method: string; amount: number }[]
   date?: string
   spa_id?: string
   created_by?: string | null
