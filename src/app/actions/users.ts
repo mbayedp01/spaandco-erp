@@ -6,16 +6,16 @@ import { getCurrentUserRole } from '@/lib/user-role'
 import { updateUserProfile } from '@/lib/db/users'
 import { logCurrentAction } from '@/lib/audit'
 
-async function requireAdmin() {
+async function isAdmin(): Promise<boolean> {
   const role = await getCurrentUserRole()
-  if (role !== 'admin') throw new Error('Permission refusée')
+  return role === 'admin'
 }
 
 export async function updateUserRoleAction(
   userId: string,
   role: string,
 ): Promise<{ error?: string }> {
-  await requireAdmin()
+  if (!(await isAdmin())) return { error: 'Permission refusée' }
   const result = await updateUserProfile(userId, { role })
   if (result.error) return { error: result.error }
   await logCurrentAction({ action: 'updated', entity_type: 'user', entity_name: `Rôle → ${role}`, spa_id: null })
@@ -27,7 +27,7 @@ export async function toggleUserStatusAction(
   userId: string,
   currentStatus: string,
 ): Promise<{ error?: string }> {
-  await requireAdmin()
+  if (!(await isAdmin())) return { error: 'Permission refusée' }
   const newStatus = currentStatus === 'actif' ? 'inactif' : 'actif'
   const result = await updateUserProfile(userId, { status: newStatus })
   if (result.error) return { error: result.error }
@@ -42,7 +42,7 @@ export async function createUserAction(
   password: string,
   spa_id?: string,
 ): Promise<{ error?: string }> {
-  await requireAdmin()
+  if (!(await isAdmin())) return { error: 'Permission refusée' }
 
   // Admin API via fetch brut (compatible nouveau format de clé Supabase sb_secret_...)
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -94,7 +94,7 @@ export async function createUserAction(
 }
 
 export async function deleteUserAction(userId: string): Promise<{ error?: string }> {
-  await requireAdmin()
+  if (!(await isAdmin())) return { error: 'Permission refusée' }
   // Désactivation soft : on ne supprime pas l'auth user, on le marque inactif
   const result = await updateUserProfile(userId, { status: 'inactif' })
   if (result.error) return { error: result.error }

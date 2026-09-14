@@ -6,9 +6,9 @@ import { getCurrentUserRole } from '@/lib/user-role'
 import { getCurrentSpaId } from '@/lib/spa'
 import { logCurrentAction } from '@/lib/audit'
 
-async function requireAdmin() {
+async function isAdmin(): Promise<boolean> {
   const role = await getCurrentUserRole()
-  if (role !== 'admin') throw new Error('Permission refusée')
+  return role === 'admin'
 }
 
 export interface PlanFormData {
@@ -27,7 +27,7 @@ export interface PlanFormData {
 }
 
 export async function createPlanAction(data: PlanFormData): Promise<{ error?: string }> {
-  await requireAdmin()
+  if (!(await isAdmin())) return { error: 'Permission refusée' }
   const supabase = createServerClient()
   const spaId = await getCurrentSpaId()
   const { error } = await (supabase.from('membership_plans') as any).insert({ ...data, spa_id: spaId })
@@ -38,7 +38,7 @@ export async function createPlanAction(data: PlanFormData): Promise<{ error?: st
 }
 
 export async function updatePlanAction(id: string, data: Partial<PlanFormData>): Promise<{ error?: string }> {
-  await requireAdmin()
+  if (!(await isAdmin())) return { error: 'Permission refusée' }
   const supabase = createServerClient()
   const { error } = await (supabase.from('membership_plans') as any).update(data).eq('id', id)
   if (error) return { error: error.message }
@@ -48,7 +48,7 @@ export async function updatePlanAction(id: string, data: Partial<PlanFormData>):
 }
 
 export async function deletePlanAction(id: string): Promise<{ error?: string }> {
-  await requireAdmin()
+  if (!(await isAdmin())) return { error: 'Permission refusée' }
   const supabase = createServerClient()
   const { data: plan } = await (supabase.from('membership_plans') as any).select('name').eq('id', id).single()
   const { error } = await supabase.from('membership_plans').delete().eq('id', id)
@@ -59,7 +59,7 @@ export async function deletePlanAction(id: string): Promise<{ error?: string }> 
 }
 
 export async function togglePlanAction(id: string, currentActive: boolean): Promise<{ error?: string }> {
-  await requireAdmin()
+  if (!(await isAdmin())) return { error: 'Permission refusée' }
   const supabase = createServerClient()
   const { data: plan } = await (supabase.from('membership_plans') as any).select('name').eq('id', id).single()
   const { error } = await (supabase.from('membership_plans') as any).update({ active: !currentActive }).eq('id', id)
