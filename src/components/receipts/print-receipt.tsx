@@ -14,6 +14,7 @@ export interface ReceiptTransaction {
   type: string
   payment_method: string | null
   date: string
+  performed_by?: string[] | null
 }
 
 export interface ReceiptEstablishment {
@@ -37,6 +38,7 @@ function ticketHtml(t: ReceiptTransaction, spa: ReceiptEstablishment, clientName
   const ref = `TK-${t.id.slice(0, 8).toUpperCase()}`
   const { client, designation } = parseClientAndLabel(t.label)
   const displayClient = clientName || client
+  const therapists = (t.performed_by ?? []).filter(Boolean)
 
   return `<!DOCTYPE html><html><head>
 <meta charset="UTF-8"><title>Reçu ${ref}</title>
@@ -65,6 +67,7 @@ ${displayClient ? `<div class="row"><span>Client</span><span class="b">${display
 <div class="row"><span class="b">${designation}</span><span class="b">${t.amount.toLocaleString('fr-FR')} F</span></div>
 ${t.category ? `<div class="row"><span style="color:#555">Catégorie</span><span>${t.category}</span></div>` : ''}
 ${t.payment_method ? `<div class="row"><span>Paiement</span><span>${t.payment_method}</span></div>` : ''}
+${therapists.length > 0 ? `<div class="row"><span>${therapists.length > 1 ? 'Praticiens' : 'Praticien'}</span><span>${therapists.join(', ')}</span></div>` : ''}
 <div class="line"></div>
 <div class="total"><span>TOTAL</span><span>${t.amount.toLocaleString('fr-FR')} FCFA</span></div>
 <div class="sep"></div>
@@ -83,6 +86,7 @@ function a4Html(t: ReceiptTransaction, spa: ReceiptEstablishment, clientName?: s
   const typLabel = isRec ? 'Encaissement' : 'Dépense'
   const { client, designation } = parseClientAndLabel(t.label)
   const displayClient = clientName || client
+  const therapists = (t.performed_by ?? []).filter(Boolean)
 
   return `<!DOCTYPE html><html><head>
 <meta charset="UTF-8"><title>Facture ${ref}</title>
@@ -139,6 +143,7 @@ ${displayClient ? `<div class="client-box"><label>Client</label><div class="val"
   <div class="meta-item"><label>Date &amp; heure</label><div class="val">${dateStr} à ${timeStr}</div></div>
   <div class="meta-item"><label>Type</label><div class="val"><span class="badge" style="background:${badgeBg};color:${badgeColor}">${typLabel}</span></div></div>
   <div class="meta-item"><label>Mode de paiement</label><div class="val">${t.payment_method ? `<span class="badge" style="background:#e0f2fe;color:#0369a1">${t.payment_method}</span>` : '—'}</div></div>
+  ${therapists.length > 0 ? `<div class="meta-item"><label>${therapists.length > 1 ? 'Praticiens' : 'Praticien'}</label><div class="val">${therapists.join(', ')}</div></div>` : ''}
 </div>
 <div class="divider-sm"></div>
 <table>
@@ -240,6 +245,12 @@ function PrintModalContent({
           <div className="flex items-center justify-between">
             <span className="text-stone-500">Paiement</span>
             <span className="text-slate-700">{transaction.payment_method}</span>
+          </div>
+        )}
+        {transaction.performed_by && transaction.performed_by.filter(Boolean).length > 0 && (
+          <div className="flex items-center justify-between">
+            <span className="text-stone-500">{transaction.performed_by.filter(Boolean).length > 1 ? 'Praticiens' : 'Praticien'}</span>
+            <span className="text-slate-700">{transaction.performed_by.filter(Boolean).join(', ')}</span>
           </div>
         )}
       </div>

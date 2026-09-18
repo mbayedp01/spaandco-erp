@@ -151,6 +151,7 @@ function ServicePicker({ services, cart, onAdd }: {
 interface SavedTx {
   label: string; amount: number; type: string
   payment_method: string; category: string; client_name: string; date: string
+  performed_by?: string[]
 }
 
 function TransactionForm({
@@ -270,7 +271,7 @@ function TransactionForm({
     start(async () => {
       const result = await addTransactionAction(fd)
       if (result.error) { setError(result.error); return }
-      onSaved({ label: fullLabel, amount: totalAmount, type: txType, payment_method: effectivePayMethod, category, client_name: clientName, date: new Date().toISOString().split('T')[0] })
+      onSaved({ label: fullLabel, amount: totalAmount, type: txType, payment_method: effectivePayMethod, category, client_name: clientName, date: new Date().toISOString().split('T')[0], performed_by: mode === 'prestation' ? performers : undefined })
     })
   }
 
@@ -558,7 +559,7 @@ function TransactionButton({
 
       {saved && (
         <InvoiceModal
-          transaction={{ id: 'new-' + Date.now(), label: saved.label, category: saved.category, amount: saved.amount, type: saved.type, payment_method: saved.payment_method, date: saved.date }}
+          transaction={{ id: 'new-' + Date.now(), label: saved.label, category: saved.category, amount: saved.amount, type: saved.type, payment_method: saved.payment_method, date: saved.date, performed_by: saved.performed_by }}
           establishment={establishment}
           clientName={saved.client_name}
           onClose={() => setSaved(null)}
