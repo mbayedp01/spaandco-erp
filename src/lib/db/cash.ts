@@ -27,13 +27,21 @@ export async function addCashTransaction(payload: {
   spa_id?: string
   created_by?: string | null
   performed_by?: string[]
+  line_items?: { name: string; price: number; qty: number; performers: string[] }[]
 }): Promise<{ data?: CashTransaction; error?: string }> {
   const supabase = createServerClient()
+  const row = { ...payload, date: payload.date ?? new Date().toISOString().split('T')[0] } as any
   const { data, error } = await supabase
     .from('cash_transactions')
-    .insert({ ...payload, date: payload.date ?? new Date().toISOString().split('T')[0] } as any)
+    .insert(row)
     .select()
     .single()
+  if (error && error.message.includes('line_items')) {
+    delete row.line_items
+    const retry = await supabase.from('cash_transactions').insert(row as any).select().single()
+    if (retry.error) return { error: retry.error.message }
+    return { data: retry.data as CashTransaction }
+  }
   if (error) return { error: error.message }
   return { data: data as CashTransaction }
 }

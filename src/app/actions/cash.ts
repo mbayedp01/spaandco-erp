@@ -14,6 +14,7 @@ export async function addTransactionAction(formData: FormData): Promise<{ error?
   const type             = String(formData.get('type')) as 'recette' | 'charge'
   const performed_by     = (formData.getAll('performed_by') as string[]).map(s => s.trim()).filter(Boolean)
   const splitsRaw        = String(formData.get('payment_splits') ?? '')
+  const lineItemsRaw     = String(formData.get('line_items') ?? '')
 
   if (!label || !amount || !type) return { error: 'Champs requis manquants' }
 
@@ -39,12 +40,19 @@ export async function addTransactionAction(formData: FormData): Promise<{ error?
     }
   }
 
+  let line_items: { name: string; price: number; qty: number; performers: string[] }[] | undefined
+  if (lineItemsRaw) {
+    try {
+      line_items = JSON.parse(lineItemsRaw)
+    } catch { /* ignore invalid JSON */ }
+  }
+
   const supabase  = createServerClient()
   const { data: { user } } = await supabase.auth.getUser()
   const created_by = user?.user_metadata?.name ?? user?.email ?? null
   const spa_id     = await getCurrentSpaId()
 
-  const result = await addCashTransaction({ label, category, amount, type, payment_method, payment_splits, created_by, spa_id, performed_by })
+  const result = await addCashTransaction({ label, category, amount, type, payment_method, payment_splits, created_by, spa_id, performed_by, line_items })
   if (result.error) return { error: result.error }
   await logCurrentAction({ action: 'created', entity_type: 'cash', entity_name: `${label} · ${amount.toLocaleString('fr-FR')} F`, spa_id })
   revalidatePath('/cash')

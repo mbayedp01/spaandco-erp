@@ -136,6 +136,7 @@ export interface Database {
           payment_splits: { method: string; amount: number }[] | null
           created_by: string | null
           performed_by: string[] | null
+          line_items: { name: string; price: number; qty: number; performers: string[] }[] | null
           spa_id: string | null
           created_at: string
         }

@@ -6,6 +6,13 @@ import { cn } from '@/lib/utils'
 
 type Format = 'ticket' | 'a4'
 
+export interface ReceiptLineItem {
+  name: string
+  price: number
+  qty: number
+  performers: string[]
+}
+
 export interface ReceiptTransaction {
   id: string
   label: string | null
@@ -15,6 +22,7 @@ export interface ReceiptTransaction {
   payment_method: string | null
   date: string
   performed_by?: string[] | null
+  line_items?: ReceiptLineItem[] | null
 }
 
 export interface ReceiptEstablishment {
@@ -40,6 +48,20 @@ function ticketHtml(t: ReceiptTransaction, spa: ReceiptEstablishment, clientName
   const displayClient = clientName || client
   const therapists = (t.performed_by ?? []).filter(Boolean)
 
+  const lines = (t.line_items ?? []).filter(l => l.name)
+  const hasLines = lines.length > 0
+
+  let linesHtml: string
+  if (hasLines) {
+    linesHtml = lines.map(l => {
+      const perf = (l.performers ?? []).filter(Boolean)
+      const subtotal = l.price * l.qty
+      return `<div class="row"><span class="b">${l.name}${l.qty > 1 ? ` ×${l.qty}` : ''}</span><span class="b">${subtotal.toLocaleString('fr-FR')} F</span></div>${perf.length > 0 ? `<div style="font-size:10px;color:#555;margin:0 0 1mm;">  ↳ ${perf.join(', ')}</div>` : ''}`
+    }).join('')
+  } else {
+    linesHtml = `<div class="row"><span class="b">${designation}</span><span class="b">${t.amount.toLocaleString('fr-FR')} F</span></div>${therapists.length > 0 ? `<div class="row"><span>${therapists.length > 1 ? 'Praticiens' : 'Praticien'}</span><span>${therapists.join(', ')}</span></div>` : ''}`
+  }
+
   return `<!DOCTYPE html><html><head>
 <meta charset="UTF-8"><title>Reçu ${ref}</title>
 <style>
@@ -64,10 +86,9 @@ ${spa.phone ? `<div class="c">Tél: ${spa.phone}</div>` : ''}
 <div class="row"><span>Date</span><span>${dateStr}</span></div>
 ${displayClient ? `<div class="row"><span>Client</span><span class="b">${displayClient}</span></div>` : ''}
 <div class="sep"></div>
-<div class="row"><span class="b">${designation}</span><span class="b">${t.amount.toLocaleString('fr-FR')} F</span></div>
+${linesHtml}
 ${t.category ? `<div class="row"><span style="color:#555">Catégorie</span><span>${t.category}</span></div>` : ''}
 ${t.payment_method ? `<div class="row"><span>Paiement</span><span>${t.payment_method}</span></div>` : ''}
-${therapists.length > 0 ? `<div class="row"><span>${therapists.length > 1 ? 'Praticiens' : 'Praticien'}</span><span>${therapists.join(', ')}</span></div>` : ''}
 <div class="line"></div>
 <div class="total"><span>TOTAL</span><span>${t.amount.toLocaleString('fr-FR')} FCFA</span></div>
 <div class="sep"></div>
@@ -87,6 +108,8 @@ function a4Html(t: ReceiptTransaction, spa: ReceiptEstablishment, clientName?: s
   const { client, designation } = parseClientAndLabel(t.label)
   const displayClient = clientName || client
   const therapists = (t.performed_by ?? []).filter(Boolean)
+  const lines = (t.line_items ?? []).filter(l => l.name)
+  const hasLines = lines.length > 0
 
   return `<!DOCTYPE html><html><head>
 <meta charset="UTF-8"><title>Facture ${ref}</title>
@@ -143,16 +166,23 @@ ${displayClient ? `<div class="client-box"><label>Client</label><div class="val"
   <div class="meta-item"><label>Date &amp; heure</label><div class="val">${dateStr} à ${timeStr}</div></div>
   <div class="meta-item"><label>Type</label><div class="val"><span class="badge" style="background:${badgeBg};color:${badgeColor}">${typLabel}</span></div></div>
   <div class="meta-item"><label>Mode de paiement</label><div class="val">${t.payment_method ? `<span class="badge" style="background:#e0f2fe;color:#0369a1">${t.payment_method}</span>` : '—'}</div></div>
-  ${therapists.length > 0 ? `<div class="meta-item"><label>${therapists.length > 1 ? 'Praticiens' : 'Praticien'}</label><div class="val">${therapists.join(', ')}</div></div>` : ''}
+  ${!hasLines && therapists.length > 0 ? `<div class="meta-item"><label>${therapists.length > 1 ? 'Praticiens' : 'Praticien'}</label><div class="val">${therapists.join(', ')}</div></div>` : ''}
 </div>
 <div class="divider-sm"></div>
 <table>
-  <thead><tr><th>Désignation</th><th>Catégorie</th><th style="text-align:right">Montant</th></tr></thead>
-  <tbody><tr>
+  <thead><tr><th>Désignation</th><th>Praticien(s)</th><th style="text-align:right">Montant</th></tr></thead>
+  <tbody>${hasLines ? lines.map(l => {
+    const perf = (l.performers ?? []).filter(Boolean)
+    const subtotal = l.price * l.qty
+    return `<tr>
+    <td style="font-weight:700;color:#1e293b">${l.name}${l.qty > 1 ? ` ×${l.qty}` : ''}</td>
+    <td style="color:#64748b">${perf.length > 0 ? perf.join(', ') : '—'}</td>
+    <td style="text-align:right;font-weight:700;color:${amtColor}">${subtotal.toLocaleString('fr-FR')} FCFA</td>
+  </tr>`}).join('') : `<tr>
     <td style="font-weight:700;color:#1e293b">${designation}</td>
-    <td style="color:#64748b">${t.category ?? '—'}</td>
+    <td style="color:#64748b">${therapists.length > 0 ? therapists.join(', ') : '—'}</td>
     <td style="text-align:right;font-weight:700;color:${amtColor}">${t.amount.toLocaleString('fr-FR')} FCFA</td>
-  </tr></tbody>
+  </tr>`}</tbody>
 </table>
 <div class="total-box">
   <span class="total-lbl">Total TTC</span>
@@ -178,6 +208,7 @@ function PrintModalContent({
   const [format, setFormat] = useState<Format>('ticket')
   const { client, designation } = parseClientAndLabel(transaction.label)
   const displayClient = clientName || client
+  const previewLines = (transaction.line_items ?? []).filter(l => l.name)
 
   function doPrint() {
     const html = format === 'ticket'
@@ -227,12 +258,34 @@ function PrintModalContent({
             <span className="font-semibold text-slate-900">{displayClient}</span>
           </div>
         )}
+        {previewLines.length > 0 ? (
+          <>
+            <div className="text-stone-500 text-xs font-medium mt-1">Prestations</div>
+            {previewLines.map((l, i) => {
+              const perf = (l.performers ?? []).filter(Boolean)
+              return (
+                <div key={i} className="ml-1 border-l-2 border-primary-200 pl-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-slate-900">{l.name}{l.qty > 1 ? ` ×${l.qty}` : ''}</span>
+                    <span className={cn('font-semibold tabular-nums text-xs', transaction.type === 'recette' ? 'text-emerald-700' : 'text-rose-700')}>
+                      {(l.price * l.qty).toLocaleString('fr-FR')} F
+                    </span>
+                  </div>
+                  {perf.length > 0 && (
+                    <div className="text-xs text-stone-400">↳ {perf.join(', ')}</div>
+                  )}
+                </div>
+              )
+            })}
+          </>
+        ) : (
+          <div className="flex items-center justify-between">
+            <span className="text-stone-500">Désignation</span>
+            <span className="font-medium text-slate-900 truncate ml-2 max-w-[180px]">{designation || transaction.label || '—'}</span>
+          </div>
+        )}
         <div className="flex items-center justify-between">
-          <span className="text-stone-500">Désignation</span>
-          <span className="font-medium text-slate-900 truncate ml-2 max-w-[180px]">{designation || transaction.label || '—'}</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-stone-500">Montant</span>
+          <span className="text-stone-500">Montant total</span>
           <span className={cn('font-semibold tabular-nums', transaction.type === 'recette' ? 'text-emerald-700' : 'text-rose-700')}>
             {transaction.amount.toLocaleString('fr-FR')} FCFA
           </span>
@@ -247,7 +300,7 @@ function PrintModalContent({
             <span className="text-slate-700">{transaction.payment_method}</span>
           </div>
         )}
-        {transaction.performed_by && transaction.performed_by.filter(Boolean).length > 0 && (
+        {previewLines.length === 0 && transaction.performed_by && transaction.performed_by.filter(Boolean).length > 0 && (
           <div className="flex items-center justify-between">
             <span className="text-stone-500">{transaction.performed_by.filter(Boolean).length > 1 ? 'Praticiens' : 'Praticien'}</span>
             <span className="text-slate-700">{transaction.performed_by.filter(Boolean).join(', ')}</span>

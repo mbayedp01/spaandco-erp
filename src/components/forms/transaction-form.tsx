@@ -12,7 +12,7 @@ export type ServiceItem   = { id: string; name: string; category: string | null;
 export type ProductItem   = { id: string; name: string; unit_price: number; unit: string | null; quantity: number }
 
 type Mode = 'prestation' | 'produit' | 'libre'
-interface CartLine { service: ServiceItem; qty: number }
+interface CartLine { service: ServiceItem; qty: number; performers: string[] }
 interface PaySplit { method: string; amount: string }
 
 const PAYMENT_METHODS = ['Cash', 'Wave', 'Orange Money', 'Carte', 'Mobile Money', 'Virement']
@@ -148,10 +148,15 @@ function ServicePicker({ services, cart, onAdd }: {
 
 // ─── Transaction form ─────────────────────────────────────────────────────────
 
+export interface LineItem {
+  name: string; price: number; qty: number; performers: string[]
+}
+
 interface SavedTx {
   label: string; amount: number; type: string
   payment_method: string; category: string; client_name: string; date: string
   performed_by?: string[]
+  line_items?: LineItem[]
 }
 
 function TransactionForm({
@@ -175,23 +180,26 @@ function TransactionForm({
   const [splitPay, setSplitPay]   = useState(false)
   const [splits, setSplits]       = useState<PaySplit[]>([{ method: 'Cash', amount: '' }, { method: 'Wave', amount: '' }])
   const [txType, setTxType]       = useState<'recette' | 'charge'>(defaultType)
-  const [performers, setPerformers] = useState<string[]>([])
   const [error, setError]         = useState('')
   const [pending, start]          = useTransition()
-
-  function togglePerformer(name: string) {
-    setPerformers(prev => prev.includes(name) ? prev.filter(n => n !== name) : [...prev, name])
-  }
 
   const [cart, setCart] = useState<CartLine[]>([])
   const cartTotal = cart.reduce((s, l) => s + (l.service.price ?? 0) * l.qty, 0)
   const cartLabel = cart.map(l => l.qty > 1 ? `${l.service.name} ×${l.qty}` : l.service.name).join(' + ')
 
+  function toggleLinePerformer(serviceId: string, name: string) {
+    setCart(prev => prev.map(l =>
+      l.service.id === serviceId
+        ? { ...l, performers: l.performers.includes(name) ? l.performers.filter(n => n !== name) : [...l.performers, name] }
+        : l
+    ))
+  }
+
   function addToCart(s: ServiceItem) {
     setCart(prev => {
       const i = prev.findIndex(l => l.service.id === s.id)
       if (i >= 0) { const n = [...prev]; n[i] = { ...n[i], qty: n[i].qty + 1 }; return n }
-      return [...prev, { service: s, qty: 1 }]
+      return [...prev, { service: s, qty: 1, performers: [] }]
     })
     if (cart.length === 0) setCategory(s.category ?? 'Soins')
   }
@@ -222,7 +230,6 @@ function TransactionForm({
     setMode(m)
     setLabel(''); setAmount('')
     setCart([])
-    if (m !== 'prestation') setPerformers([])
     setCategory(m === 'produit' ? 'Stock' : m === 'libre' ? 'Divers' : 'Soins')
   }
 
@@ -253,12 +260,18 @@ function TransactionForm({
       return
     }
 
+    const lineItems: LineItem[] = mode === 'prestation'
+      ? cart.map(l => ({ name: l.service.name, price: l.service.price ?? 0, qty: l.qty, performers: l.performers }))
+      : []
+    const allPerformers = [...new Set(lineItems.flatMap(l => l.performers))]
+
     const fd = new FormData()
     fd.set('label',          fullLabel)
     fd.set('amount',         String(totalAmount))
     fd.set('type',           txType)
     fd.set('category',       category)
-    if (mode === 'prestation') performers.forEach(p => fd.append('performed_by', p))
+    if (mode === 'prestation' && lineItems.length > 0) fd.set('line_items', JSON.stringify(lineItems))
+    if (mode === 'prestation') allPerformers.forEach(p => fd.append('performed_by', p))
 
     let effectivePayMethod = payMethod
     if (splitPay) {
@@ -271,7 +284,7 @@ function TransactionForm({
     start(async () => {
       const result = await addTransactionAction(fd)
       if (result.error) { setError(result.error); return }
-      onSaved({ label: fullLabel, amount: totalAmount, type: txType, payment_method: effectivePayMethod, category, client_name: clientName, date: new Date().toISOString().split('T')[0], performed_by: mode === 'prestation' ? performers : undefined })
+      onSaved({ label: fullLabel, amount: totalAmount, type: txType, payment_method: effectivePayMethod, category, client_name: clientName, date: new Date().toISOString().split('T')[0], performed_by: allPerformers.length > 0 ? allPerformers : undefined, line_items: lineItems.length > 0 ? lineItems : undefined })
     })
   }
 
@@ -311,26 +324,48 @@ function TransactionForm({
           <label className={labelCls}>Prestations *</label>
           <ServicePicker services={services} cart={cart} onAdd={addToCart} />
           {cart.length > 0 && (
-            <ul className="mt-2 space-y-1.5 rounded-md border border-stone-100 bg-stone-50 p-2">
-              {cart.map(({ service: svc, qty }) => (
-                <li key={svc.id} className="flex items-center gap-2 text-sm">
-                  <span className="flex-1 truncate font-medium text-slate-800">{svc.name}</span>
-                  <div className="flex items-center gap-1">
-                    <button type="button" onClick={() => setCartQty(svc.id, qty - 1)}
-                      className="h-5 w-5 rounded border border-stone-200 bg-white text-stone-500 hover:bg-stone-100 flex items-center justify-center text-xs cursor-pointer">−</button>
-                    <span className="w-4 text-center text-xs font-semibold">{qty}</span>
-                    <button type="button" onClick={() => setCartQty(svc.id, qty + 1)}
-                      className="h-5 w-5 rounded border border-stone-200 bg-white text-stone-500 hover:bg-stone-100 flex items-center justify-center text-xs cursor-pointer">+</button>
+            <ul className="mt-2 space-y-0 rounded-md border border-stone-100 bg-stone-50 p-2">
+              {cart.map(({ service: svc, qty, performers: linePerf }) => (
+                <li key={svc.id} className="border-b border-stone-100 pb-2 mb-2 last:border-0 last:pb-0 last:mb-0">
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="flex-1 truncate font-medium text-slate-800">{svc.name}</span>
+                    <div className="flex items-center gap-1">
+                      <button type="button" onClick={() => setCartQty(svc.id, qty - 1)}
+                        className="h-5 w-5 rounded border border-stone-200 bg-white text-stone-500 hover:bg-stone-100 flex items-center justify-center text-xs cursor-pointer">−</button>
+                      <span className="w-4 text-center text-xs font-semibold">{qty}</span>
+                      <button type="button" onClick={() => setCartQty(svc.id, qty + 1)}
+                        className="h-5 w-5 rounded border border-stone-200 bg-white text-stone-500 hover:bg-stone-100 flex items-center justify-center text-xs cursor-pointer">+</button>
+                    </div>
+                    {svc.price != null && (
+                      <span className="w-20 shrink-0 text-right text-xs font-semibold text-primary-700">
+                        {(svc.price * qty).toLocaleString('fr-FR')} F
+                      </span>
+                    )}
+                    <button type="button" onClick={() => removeFromCart(svc.id)}
+                      className="shrink-0 text-stone-300 hover:text-rose-500 cursor-pointer">
+                      <X className="h-3.5 w-3.5" />
+                    </button>
                   </div>
-                  {svc.price != null && (
-                    <span className="w-20 shrink-0 text-right text-xs font-semibold text-primary-700">
-                      {(svc.price * qty).toLocaleString('fr-FR')} F
-                    </span>
+                  {staffNames.length > 0 && (
+                    <div className="mt-1.5 flex flex-wrap gap-1">
+                      <span className="text-[10px] text-stone-400 leading-5 mr-0.5">Praticien :</span>
+                      {staffNames.map(name => {
+                        const on = linePerf.includes(name)
+                        return (
+                          <button
+                            key={name} type="button" onClick={() => toggleLinePerformer(svc.id, name)}
+                            className={`rounded-full border px-2 py-0.5 text-[10px] font-medium transition-colors cursor-pointer ${
+                              on
+                                ? 'border-primary-600 bg-primary-600 text-white'
+                                : 'border-stone-200 bg-white text-stone-500 hover:bg-stone-50'
+                            }`}
+                          >
+                            {name}
+                          </button>
+                        )
+                      })}
+                    </div>
                   )}
-                  <button type="button" onClick={() => removeFromCart(svc.id)}
-                    className="shrink-0 text-stone-300 hover:text-rose-500 cursor-pointer">
-                    <X className="h-3.5 w-3.5" />
-                  </button>
                 </li>
               ))}
               <li className="mt-1.5 flex items-center justify-between border-t border-stone-200 pt-1.5">
@@ -342,39 +377,6 @@ function TransactionForm({
               </li>
             </ul>
           )}
-
-          {/* Praticien(s) ayant réalisé la prestation — avant ou après la séance */}
-          <div className="mt-3">
-            <label className={labelCls}>
-              Praticien(s) <span className="font-normal text-stone-400">— qui a réalisé la prestation (modifiable)</span>
-            </label>
-            {staffNames.length > 0 ? (
-              <div className="flex flex-wrap gap-1.5">
-                {staffNames.map(name => {
-                  const on = performers.includes(name)
-                  return (
-                    <button
-                      key={name} type="button" onClick={() => togglePerformer(name)}
-                      className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors cursor-pointer ${
-                        on
-                          ? 'border-primary-600 bg-primary-600 text-white'
-                          : 'border-stone-200 bg-white text-stone-600 hover:bg-stone-50'
-                      }`}
-                    >
-                      {name}
-                    </button>
-                  )
-                })}
-              </div>
-            ) : (
-              <p className="text-xs text-stone-400">Aucun praticien enregistré pour cet établissement.</p>
-            )}
-            {performers.length > 1 && (
-              <p className="mt-1.5 text-[11px] text-stone-400">
-                Séance réalisée à {performers.length} — le CA sera réparti entre les praticiens dans les statistiques.
-              </p>
-            )}
-          </div>
         </div>
       )}
 
@@ -559,7 +561,7 @@ function TransactionButton({
 
       {saved && (
         <InvoiceModal
-          transaction={{ id: 'new-' + Date.now(), label: saved.label, category: saved.category, amount: saved.amount, type: saved.type, payment_method: saved.payment_method, date: saved.date, performed_by: saved.performed_by }}
+          transaction={{ id: 'new-' + Date.now(), label: saved.label, category: saved.category, amount: saved.amount, type: saved.type, payment_method: saved.payment_method, date: saved.date, performed_by: saved.performed_by, line_items: saved.line_items }}
           establishment={establishment}
           clientName={saved.client_name}
           onClose={() => setSaved(null)}
