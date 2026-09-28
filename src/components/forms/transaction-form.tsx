@@ -15,7 +15,7 @@ type Mode = 'prestation' | 'produit' | 'libre'
 interface CartLine { service: ServiceItem; qty: number; performers: string[] }
 interface PaySplit { method: string; amount: string }
 
-const PAYMENT_METHODS = ['Cash', 'Wave', 'Orange Money', 'Carte', 'Mobile Money', 'Virement']
+const PAYMENT_METHODS = ['Cash', 'Wave', 'Orange Money', 'Carte', 'Mobile Money', 'Virement', 'Dettes', 'Déjà payé', 'Cadeau']
 
 const inputCls = 'w-full rounded-md border border-stone-200 px-3 py-2 text-sm text-slate-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-primary-500'
 const labelCls = 'block text-xs font-medium text-stone-600 mb-1'
