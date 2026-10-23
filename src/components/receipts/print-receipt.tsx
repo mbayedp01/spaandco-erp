@@ -3,15 +3,11 @@
 import { useState } from 'react'
 import { Printer, Receipt, FileText } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { legacyLines, splitClientLabel as parseClientAndLabel, type LineItem } from '@/lib/line-items'
 
 type Format = 'ticket' | 'a4'
 
-export interface ReceiptLineItem {
-  name: string
-  price: number
-  qty: number
-  performers: string[]
-}
+export type ReceiptLineItem = LineItem
 
 export interface ReceiptTransaction {
   id: string
@@ -32,13 +28,6 @@ export interface ReceiptEstablishment {
   phone: string | null
 }
 
-function parseClientAndLabel(raw: string | null): { client: string; designation: string } {
-  if (!raw) return { client: '', designation: '—' }
-  const sep = raw.indexOf(' — ')
-  if (sep === -1) return { client: '', designation: raw }
-  return { client: raw.slice(0, sep), designation: raw.slice(sep + 3) }
-}
-
 interface DisplayLine { name: string; amount: number | null; performers: string[] }
 
 // Old transactions have no line_items: services are only joined in the label, so
@@ -49,14 +38,14 @@ function displayLines(t: ReceiptTransaction): { lines: DisplayLine[]; unassigned
     return {
       lines: items.map(l => ({
         name: `${l.name}${l.qty > 1 ? ` ×${l.qty}` : ''}`,
-        amount: l.price * l.qty,
+        amount: items.length === 1 ? t.amount : l.price != null ? l.price * l.qty : null,
         performers: (l.performers ?? []).filter(Boolean),
       })),
       unassigned: [],
     }
   }
   const therapists = (t.performed_by ?? []).filter(Boolean)
-  const parts = parseClientAndLabel(t.label).designation.split(' + ').map(s => s.trim()).filter(Boolean)
+  const parts = legacyLines(t.label).map(p => `${p.name}${p.qty > 1 ? ` ×${p.qty}` : ''}`)
   if (parts.length <= 1) {
     return { lines: [{ name: parts[0] ?? '—', amount: t.amount, performers: therapists }], unassigned: [] }
   }

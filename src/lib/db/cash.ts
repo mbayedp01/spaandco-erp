@@ -1,5 +1,6 @@
 import { createServerClient } from '@/lib/supabase/server'
 import type { Database } from '@/lib/supabase/types'
+import type { LineItem } from '@/lib/line-items'
 
 type CashTransaction = Database['public']['Tables']['cash_transactions']['Row']
 
@@ -27,7 +28,7 @@ export async function addCashTransaction(payload: {
   spa_id?: string
   created_by?: string | null
   performed_by?: string[]
-  line_items?: { name: string; price: number; qty: number; performers: string[] }[]
+  line_items?: LineItem[]
 }): Promise<{ data?: CashTransaction; error?: string }> {
   const supabase = createServerClient()
   const row = { ...payload, date: payload.date ?? new Date().toISOString().split('T')[0] } as any
@@ -54,14 +55,15 @@ export async function deleteCashTransaction(id: string): Promise<{ error?: strin
   return {}
 }
 
-// Met à jour la liste des praticiens ayant réalisé la prestation (modifier / annuler)
-export async function updateTransactionPerformers(
+// performed_by stays the flat union of every line's performers (used by stats).
+export async function updateTransactionLineItems(
   id: string,
-  performers: string[],
+  lineItems: LineItem[],
 ): Promise<{ error?: string }> {
   const supabase = createServerClient()
+  const performed_by = [...new Set(lineItems.flatMap(l => l.performers))]
   const { error } = await (supabase.from('cash_transactions') as any)
-    .update({ performed_by: performers })
+    .update({ line_items: lineItems, performed_by })
     .eq('id', id)
   if (error) return { error: error.message }
   return {}

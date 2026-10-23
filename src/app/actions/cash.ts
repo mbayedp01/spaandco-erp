@@ -1,7 +1,8 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { addCashTransaction, updateTransactionPerformers, deleteCashTransaction } from '@/lib/db/cash'
+import { addCashTransaction, updateTransactionLineItems, deleteCashTransaction } from '@/lib/db/cash'
+import type { LineItem } from '@/lib/line-items'
 import { createServerClient } from '@/lib/supabase/server'
 import { getCurrentSpaId } from '@/lib/spa'
 import { getCurrentUserRole } from '@/lib/user-role'
@@ -40,7 +41,7 @@ export async function addTransactionAction(formData: FormData): Promise<{ error?
     }
   }
 
-  let line_items: { name: string; price: number; qty: number; performers: string[] }[] | undefined
+  let line_items: LineItem[] | undefined
   if (lineItemsRaw) {
     try {
       line_items = JSON.parse(lineItemsRaw)
@@ -86,19 +87,28 @@ export async function deleteTransactionAction(id: string): Promise<{ error?: str
   return {}
 }
 
-// Modifier / annuler les praticiens d'une transaction (avant ou après la séance)
-export async function setTransactionPerformersAction(
+// Modifier / annuler le(s) praticien(s) de chaque prestation d'une transaction
+export async function setTransactionLineItemsAction(
   id: string,
-  performers: string[],
+  lineItems: LineItem[],
 ): Promise<{ error?: string }> {
-  const clean = performers.map(s => s.trim()).filter(Boolean)
-  const result = await updateTransactionPerformers(id, clean)
+  const clean: LineItem[] = lineItems
+    .map(l => ({
+      name: String(l.name).trim(),
+      price: l.price == null ? null : Number(l.price),
+      qty: Math.max(1, Number(l.qty) || 1),
+      performers: (l.performers ?? []).map(s => String(s).trim()).filter(Boolean),
+    }))
+    .filter(l => l.name)
+  if (clean.length === 0) return { error: 'Aucune prestation' }
+
+  const result = await updateTransactionLineItems(id, clean)
   if (result.error) return { error: result.error }
   const spa_id = await getCurrentSpaId()
   await logCurrentAction({
     action: 'updated',
     entity_type: 'cash',
-    entity_name: clean.length > 0 ? `Praticien(s) : ${clean.join(', ')}` : 'Praticien(s) retiré(s)',
+    entity_name: 'Praticiens : ' + clean.map(l => `${l.name} → ${l.performers.join(', ') || '—'}`).join(' ; '),
     spa_id,
   })
   revalidatePath('/cash')

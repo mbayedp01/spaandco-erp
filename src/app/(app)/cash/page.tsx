@@ -92,6 +92,7 @@ export default async function CashPage({
   const services = allServices.filter(s => s.active).map(s => ({ id: s.id, name: s.name, category: s.category, price: s.price ? Number(s.price) : null, duration: s.duration }))
   const products = allInventory.filter(i => i.unit_price != null).map(i => ({ id: i.id, name: i.name, unit_price: Number(i.unit_price), unit: i.unit, quantity: i.quantity }))
   const staffNames = allStaff.filter(s => s.status === 'active').map(s => `${s.first_name} ${s.last_name}`)
+  const servicePrices = Object.fromEntries(allServices.filter(s => s.price != null).map(s => [s.name, Number(s.price)]))
 
   const transactions = applyFilters(allTransactions, period, type, caissier, dateFrom, dateTo)
 
@@ -195,8 +196,12 @@ export default async function CashPage({
                   {t.type === 'recette' && (
                     <PerformerEditor
                       transactionId={t.id}
-                      performers={(t as any).performed_by ?? []}
+                      label={t.label}
+                      amount={t.amount}
+                      lineItems={t.line_items}
+                      performers={t.performed_by ?? []}
                       staffNames={staffNames}
+                      servicePrices={servicePrices}
                     />
                   )}
                 </div>
