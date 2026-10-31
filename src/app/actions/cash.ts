@@ -97,7 +97,8 @@ export async function setTransactionLineItemsAction(
       name: String(l.name).trim(),
       price: l.price == null ? null : Number(l.price),
       qty: Math.max(1, Number(l.qty) || 1),
-      performers: (l.performers ?? []).map(s => String(s).trim()).filter(Boolean),
+      performers: l.kind === 'product' ? [] : (l.performers ?? []).map(s => String(s).trim()).filter(Boolean),
+      ...(l.kind === 'product' || l.kind === 'service' ? { kind: l.kind } : {}),
     }))
     .filter(l => l.name)
   if (clean.length === 0) return { error: 'Aucune prestation' }

@@ -41,6 +41,7 @@ function initialLines({ label, amount, lineItems, performers, servicePrices }: P
 export function PerformerEditor(props: Props) {
   const { transactionId, lineItems, performers, staffNames } = props
   const current = initialLines(props)
+  const serviceLines = current.filter(l => l.kind !== 'product')
   const isLegacyShared = !(lineItems && lineItems.length > 0) && current.length > 1 && performers.length > 1
 
   const [open, setOpen]   = useState(false)
@@ -78,7 +79,7 @@ export function PerformerEditor(props: Props) {
         className="mt-0.5 flex flex-col items-start gap-0.5 rounded-md text-left text-xs text-stone-400 hover:text-primary-600 cursor-pointer"
         title="Praticien(s) ayant réalisé chaque prestation"
       >
-        {current.length === 1 || isLegacyShared ? (
+        {serviceLines.length <= 1 || isLegacyShared ? (
           <span className="inline-flex items-center gap-1">
             <UserCog className="h-3 w-3 shrink-0" />
             {performers.length > 0
@@ -86,7 +87,7 @@ export function PerformerEditor(props: Props) {
               : <span className="italic">Ajouter praticien</span>}
             {isLegacyShared && <span className="italic text-amber-600">· à répartir par prestation</span>}
           </span>
-        ) : current.map((l, i) => (
+        ) : serviceLines.map((l, i) => (
           <span key={i} className="inline-flex items-center gap-1">
             <UserCog className="h-3 w-3 shrink-0" />
             <span className="text-stone-400">{lineTitle(l)} —</span>
@@ -113,7 +114,7 @@ export function PerformerEditor(props: Props) {
             <p className="text-xs text-stone-400">Aucun praticien enregistré pour cet établissement.</p>
           ) : (
             <div className="max-h-[55vh] space-y-3 overflow-y-auto">
-              {draft.map((l, i) => (
+              {draft.map((l, i) => l.kind === 'product' ? null : (
                 <div key={i} className="rounded-lg border border-stone-200 p-3">
                   <div className="mb-2 flex items-baseline justify-between gap-2">
                     <span className="text-sm font-medium text-slate-900">{lineTitle(l)}</span>

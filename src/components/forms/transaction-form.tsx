@@ -6,13 +6,22 @@ import { Modal } from '@/components/ui/modal'
 import { addTransactionAction } from '@/app/actions/cash'
 import { InvoiceModal } from '@/components/receipts/print-receipt'
 import type { ReceiptEstablishment } from '@/components/receipts/print-receipt'
+import type { LineItem } from '@/lib/line-items'
 
 export type ClientItem    = { id: string; first_name: string; last_name: string; phone?: string | null }
 export type ServiceItem   = { id: string; name: string; category: string | null; price: number | null; duration: number | null }
 export type ProductItem   = { id: string; name: string; unit_price: number; unit: string | null; quantity: number }
 
-type Mode = 'prestation' | 'produit' | 'libre'
-interface CartLine { service: ServiceItem; qty: number; performers: string[] }
+type Mode = 'vente' | 'libre'
+interface CartLine {
+  key: string
+  kind: 'service' | 'product'
+  name: string
+  price: number | null
+  qty: number
+  performers: string[]
+}
+interface CatalogItem { key: string; name: string; price: number | null; sub: string }
 interface PaySplit { method: string; amount: string }
 
 const PAYMENT_METHODS = ['Cash', 'Wave', 'Orange Money', 'Carte', 'Mobile Money', 'Virement', 'Dettes', 'Déjà payé', 'Cadeau']
@@ -78,22 +87,22 @@ function Combobox<T extends { id: string; name: string }>({
   )
 }
 
-// ─── Multi-service picker ──────────────────────────────────────────────────────
+// ─── Catalogue picker (prestations / produits) ─────────────────────────────────
 
-function ServicePicker({ services, cart, onAdd }: {
-  services: ServiceItem[]
+function CatalogPicker({ items, cart, onAdd, placeholder, emptyText }: {
+  items: CatalogItem[]
   cart: CartLine[]
-  onAdd: (s: ServiceItem) => void
+  onAdd: (key: string) => void
+  placeholder: string
+  emptyText: string
 }) {
   const [query, setQuery] = useState('')
   const [open, setOpen]   = useState(false)
   const closeTimer        = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const filtered = services
-    .filter(s =>
-      s.name.toLowerCase().includes(query.toLowerCase()) ||
-      (s.category ?? '').toLowerCase().includes(query.toLowerCase())
-    )
+  const q = query.toLowerCase()
+  const filtered = items
+    .filter(s => s.name.toLowerCase().includes(q) || s.sub.toLowerCase().includes(q))
     .slice(0, 9)
 
   function scheduleClose() { closeTimer.current = setTimeout(() => setOpen(false), 150) }
@@ -109,17 +118,17 @@ function ServicePicker({ services, cart, onAdd }: {
           onFocus={() => { cancelClose(); setOpen(true) }}
           onBlur={scheduleClose}
           className="w-full rounded-md border border-stone-200 pl-8 pr-3 py-2 text-sm text-slate-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
-          placeholder="Ajouter une prestation…" autoComplete="off"
+          placeholder={placeholder} autoComplete="off"
         />
       </div>
       {open && (
         <ul className="absolute z-[60] mt-1 max-h-64 w-full overflow-auto rounded-md border border-stone-200 bg-white py-1 shadow-lg">
           {filtered.length > 0 ? filtered.map(s => {
-            const already = cart.some(l => l.service.id === s.id)
+            const already = cart.some(l => l.key === s.key)
             return (
-              <li key={s.id}>
+              <li key={s.key}>
                 <button type="button"
-                  onMouseDown={e => { e.preventDefault(); cancelClose(); onAdd(s); setQuery(''); setOpen(false) }}
+                  onMouseDown={e => { e.preventDefault(); cancelClose(); onAdd(s.key); setQuery(''); setOpen(false) }}
                   className="w-full px-3 py-2 text-left hover:bg-primary-50">
                   <div className="flex items-center justify-between gap-2">
                     <span className="truncate text-sm font-medium text-slate-900">{s.name}</span>
@@ -130,15 +139,12 @@ function ServicePicker({ services, cart, onAdd }: {
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-1 text-xs text-stone-400">
-                    {s.category && <span>{s.category}</span>}
-                    {s.duration && <span>· {s.duration} min</span>}
-                  </div>
+                  {s.sub && <div className="text-xs text-stone-400">{s.sub}</div>}
                 </button>
               </li>
             )
           }) : (
-            <li className="px-3 py-2 text-xs text-stone-400">Aucune prestation trouvée</li>
+            <li className="px-3 py-2 text-xs text-stone-400">{emptyText}</li>
           )}
         </ul>
       )}
@@ -147,10 +153,6 @@ function ServicePicker({ services, cart, onAdd }: {
 }
 
 // ─── Transaction form ─────────────────────────────────────────────────────────
-
-export interface LineItem {
-  name: string; price: number; qty: number; performers: string[]
-}
 
 interface SavedTx {
   label: string; amount: number; type: string
@@ -170,12 +172,11 @@ function TransactionForm({
   onSaved: (tx: SavedTx) => void
   defaultType?: 'recette' | 'charge'
 }) {
-  const [mode, setMode]           = useState<Mode>(defaultType === 'charge' ? 'libre' : 'prestation')
+  const [mode, setMode]           = useState<Mode>(defaultType === 'charge' ? 'libre' : 'vente')
   const [clientName, setClientName] = useState('')
   const [label, setLabel]         = useState('')
   const [amount, setAmount]       = useState('')
   const [category, setCategory]   = useState(defaultType === 'charge' ? 'Charges' : 'Soins')
-  const [prodQty, setProdQty]     = useState(1)
   const [payMethod, setPayMethod] = useState('Cash')
   const [splitPay, setSplitPay]   = useState(false)
   const [splits, setSplits]       = useState<PaySplit[]>([{ method: 'Cash', amount: '' }, { method: 'Wave', amount: '' }])
@@ -184,43 +185,50 @@ function TransactionForm({
   const [pending, start]          = useTransition()
 
   const [cart, setCart] = useState<CartLine[]>([])
-  const cartTotal = cart.reduce((s, l) => s + (l.service.price ?? 0) * l.qty, 0)
-  const cartLabel = cart.map(l => l.qty > 1 ? `${l.service.name} ×${l.qty}` : l.service.name).join(' + ')
+  const cartTotal = cart.reduce((s, l) => s + (l.price ?? 0) * l.qty, 0)
+  const cartLabel = cart.map(l => l.qty > 1 ? `${l.name} ×${l.qty}` : l.name).join(' + ')
+  const serviceCount = cart.filter(l => l.kind === 'service').reduce((s, l) => s + l.qty, 0)
+  const productCount = cart.filter(l => l.kind === 'product').reduce((s, l) => s + l.qty, 0)
 
-  function toggleLinePerformer(serviceId: string, name: string) {
+  const serviceCatalog: CatalogItem[] = services.map(s => ({
+    key: `service:${s.id}`, name: s.name, price: s.price,
+    sub: [s.category, s.duration ? `${s.duration} min` : null].filter(Boolean).join(' · '),
+  }))
+  const productCatalog: CatalogItem[] = products.map(p => ({
+    key: `product:${p.id}`, name: p.name, price: p.unit_price,
+    sub: `${p.unit ? `${p.unit} · ` : ''}Stock : ${p.quantity}`,
+  }))
+
+  function toggleLinePerformer(key: string, name: string) {
     setCart(prev => prev.map(l =>
-      l.service.id === serviceId
+      l.key === key
         ? { ...l, performers: l.performers.includes(name) ? l.performers.filter(n => n !== name) : [...l.performers, name] }
         : l
     ))
   }
 
-  function addToCart(s: ServiceItem) {
+  function addToCart(key: string) {
+    const kind = key.startsWith('product:') ? 'product' : 'service'
+    const item = (kind === 'product' ? productCatalog : serviceCatalog).find(i => i.key === key)
+    if (!item) return
     setCart(prev => {
-      const i = prev.findIndex(l => l.service.id === s.id)
+      const i = prev.findIndex(l => l.key === key)
       if (i >= 0) { const n = [...prev]; n[i] = { ...n[i], qty: n[i].qty + 1 }; return n }
-      return [...prev, { service: s, qty: 1, performers: [] }]
+      return [...prev, { key, kind, name: item.name, price: item.price, qty: 1, performers: [] }]
     })
-    if (cart.length === 0) setCategory(s.category ?? 'Soins')
+    if (cart.length === 0) {
+      setCategory(kind === 'product' ? 'Stock' : services.find(s => `service:${s.id}` === key)?.category ?? 'Soins')
+    }
   }
-  function removeFromCart(id: string) { setCart(prev => prev.filter(l => l.service.id !== id)) }
-  function setCartQty(id: string, q: number) {
-    if (q <= 0) return removeFromCart(id)
-    setCart(prev => prev.map(l => l.service.id === id ? { ...l, qty: q } : l))
-  }
-
-  function pickProduct(p: ProductItem | null) {
-    if (!p) { setLabel(''); setAmount(''); return }
-    setLabel(p.name); setAmount(String(p.unit_price)); setCategory('Stock')
+  function removeFromCart(key: string) { setCart(prev => prev.filter(l => l.key !== key)) }
+  function setCartQty(key: string, q: number) {
+    if (q <= 0) return removeFromCart(key)
+    setCart(prev => prev.map(l => l.key === key ? { ...l, qty: q } : l))
   }
 
-  const totalAmount = mode === 'produit'
-    ? prodQty * (Number(amount) || 0)
-    : mode === 'prestation'
-    ? cartTotal
-    : Number(amount) || 0
+  const totalAmount = mode === 'vente' ? cartTotal : Number(amount) || 0
 
-  const finalLabel = mode === 'prestation' ? cartLabel : label
+  const finalLabel = mode === 'vente' ? cartLabel : label
   const fullLabel  = clientName ? `${clientName} — ${finalLabel || '—'}` : (finalLabel || '')
 
   const splitsTotal = splits.reduce((s, l) => s + (Number(l.amount) || 0), 0)
@@ -230,7 +238,7 @@ function TransactionForm({
     setMode(m)
     setLabel(''); setAmount('')
     setCart([])
-    setCategory(m === 'produit' ? 'Stock' : m === 'libre' ? 'Divers' : 'Soins')
+    setCategory(m === 'libre' ? 'Divers' : 'Soins')
   }
 
   function addSplitLine() {
@@ -252,16 +260,16 @@ function TransactionForm({
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
-    if (mode === 'prestation' && cart.length === 0) { setError('Ajoutez au moins une prestation.'); return }
-    if (mode !== 'prestation' && !label.trim()) { setError('Veuillez sélectionner ou saisir une désignation.'); return }
+    if (mode === 'vente' && cart.length === 0) { setError('Ajoutez au moins une prestation ou un produit.'); return }
+    if (mode === 'libre' && !label.trim()) { setError('Veuillez saisir une désignation.'); return }
     if (!totalAmount) { setError('Le montant est requis.'); return }
     if (splitPay && Math.abs(splitsRemaining) > 0.01) {
       setError(`La répartition ne correspond pas au total (reste ${splitsRemaining.toLocaleString('fr-FR')} F).`)
       return
     }
 
-    const lineItems: LineItem[] = mode === 'prestation'
-      ? cart.map(l => ({ name: l.service.name, price: l.service.price ?? 0, qty: l.qty, performers: l.performers }))
+    const lineItems: LineItem[] = mode === 'vente'
+      ? cart.map(l => ({ name: l.name, price: l.price ?? 0, qty: l.qty, performers: l.kind === 'service' ? l.performers : [], kind: l.kind }))
       : []
     const allPerformers = [...new Set(lineItems.flatMap(l => l.performers))]
 
@@ -270,8 +278,8 @@ function TransactionForm({
     fd.set('amount',         String(totalAmount))
     fd.set('type',           txType)
     fd.set('category',       category)
-    if (mode === 'prestation' && lineItems.length > 0) fd.set('line_items', JSON.stringify(lineItems))
-    if (mode === 'prestation') allPerformers.forEach(p => fd.append('performed_by', p))
+    if (lineItems.length > 0) fd.set('line_items', JSON.stringify(lineItems))
+    allPerformers.forEach(p => fd.append('performed_by', p))
 
     let effectivePayMethod = payMethod
     if (splitPay) {
@@ -289,9 +297,8 @@ function TransactionForm({
   }
 
   const MODES: { key: Mode; label: string }[] = [
-    { key: 'prestation', label: 'Prestation' },
-    { key: 'produit',    label: 'Produit' },
-    { key: 'libre',      label: 'Écriture libre' },
+    { key: 'vente', label: 'Prestations & produits' },
+    { key: 'libre', label: 'Écriture libre' },
   ]
 
   return (
@@ -318,42 +325,54 @@ function TransactionForm({
         />
       </div>
 
-      {/* Prestations (multi) */}
-      {mode === 'prestation' && (
+      {/* Prestations + produits */}
+      {mode === 'vente' && (
         <div>
-          <label className={labelCls}>Prestations *</label>
-          <ServicePicker services={services} cart={cart} onAdd={addToCart} />
+          <label className={labelCls}>Prestations et produits *</label>
+          <div className="space-y-2">
+            <CatalogPicker items={serviceCatalog} cart={cart} onAdd={addToCart}
+              placeholder="Ajouter une prestation…" emptyText="Aucune prestation trouvée" />
+            {productCatalog.length > 0 && (
+              <CatalogPicker items={productCatalog} cart={cart} onAdd={addToCart}
+                placeholder="Ajouter un produit…" emptyText="Aucun produit trouvé" />
+            )}
+          </div>
           {cart.length > 0 && (
             <ul className="mt-2 space-y-0 rounded-md border border-stone-100 bg-stone-50 p-2">
-              {cart.map(({ service: svc, qty, performers: linePerf }) => (
-                <li key={svc.id} className="border-b border-stone-100 pb-2 mb-2 last:border-0 last:pb-0 last:mb-0">
+              {cart.map(({ key, kind, name: lineName, price, qty, performers: linePerf }) => (
+                <li key={key} className="border-b border-stone-100 pb-2 mb-2 last:border-0 last:pb-0 last:mb-0">
                   <div className="flex items-center gap-2 text-sm">
-                    <span className="flex-1 truncate font-medium text-slate-800">{svc.name}</span>
+                    <span className="flex min-w-0 flex-1 items-center gap-1.5">
+                      <span className="truncate font-medium text-slate-800">{lineName}</span>
+                      {kind === 'product' && (
+                        <span className="shrink-0 rounded-full bg-amber-50 px-1.5 py-px text-[10px] font-medium text-amber-700">Produit</span>
+                      )}
+                    </span>
                     <div className="flex items-center gap-1">
-                      <button type="button" onClick={() => setCartQty(svc.id, qty - 1)}
+                      <button type="button" onClick={() => setCartQty(key, qty - 1)}
                         className="h-5 w-5 rounded border border-stone-200 bg-white text-stone-500 hover:bg-stone-100 flex items-center justify-center text-xs cursor-pointer">−</button>
                       <span className="w-4 text-center text-xs font-semibold">{qty}</span>
-                      <button type="button" onClick={() => setCartQty(svc.id, qty + 1)}
+                      <button type="button" onClick={() => setCartQty(key, qty + 1)}
                         className="h-5 w-5 rounded border border-stone-200 bg-white text-stone-500 hover:bg-stone-100 flex items-center justify-center text-xs cursor-pointer">+</button>
                     </div>
-                    {svc.price != null && (
+                    {price != null && (
                       <span className="w-20 shrink-0 text-right text-xs font-semibold text-primary-700">
-                        {(svc.price * qty).toLocaleString('fr-FR')} F
+                        {(price * qty).toLocaleString('fr-FR')} F
                       </span>
                     )}
-                    <button type="button" onClick={() => removeFromCart(svc.id)}
+                    <button type="button" onClick={() => removeFromCart(key)}
                       className="shrink-0 text-stone-300 hover:text-rose-500 cursor-pointer">
                       <X className="h-3.5 w-3.5" />
                     </button>
                   </div>
-                  {staffNames.length > 0 && (
+                  {kind === 'service' && staffNames.length > 0 && (
                     <div className="mt-1.5 flex flex-wrap gap-1">
                       <span className="text-[10px] text-stone-400 leading-5 mr-0.5">Praticien :</span>
                       {staffNames.map(name => {
                         const on = linePerf.includes(name)
                         return (
                           <button
-                            key={name} type="button" onClick={() => toggleLinePerformer(svc.id, name)}
+                            key={name} type="button" onClick={() => toggleLinePerformer(key, name)}
                             className={`rounded-full border px-2 py-0.5 text-[10px] font-medium transition-colors cursor-pointer ${
                               on
                                 ? 'border-primary-600 bg-primary-600 text-white'
@@ -371,7 +390,10 @@ function TransactionForm({
               <li className="mt-1.5 flex items-center justify-between border-t border-stone-200 pt-1.5">
                 <span className="flex items-center gap-1 text-xs text-stone-500">
                   <ShoppingBag className="h-3 w-3" />
-                  {cart.reduce((s, l) => s + l.qty, 0)} prestation{cart.reduce((s, l) => s + l.qty, 0) > 1 ? 's' : ''}
+                  {[
+                    serviceCount > 0 && `${serviceCount} prestation${serviceCount > 1 ? 's' : ''}`,
+                    productCount > 0 && `${productCount} produit${productCount > 1 ? 's' : ''}`,
+                  ].filter(Boolean).join(' · ')}
                 </span>
                 <span className="text-sm font-bold text-primary-700">{cartTotal.toLocaleString('fr-FR')} F</span>
               </li>
@@ -380,57 +402,30 @@ function TransactionForm({
         </div>
       )}
 
-      {/* Produit */}
-      {mode === 'produit' && (
-        <div className="space-y-3">
-          <div>
-            <label className={labelCls}>Produit *</label>
-            <Combobox<ProductItem>
-              items={products} placeholder="Rechercher un produit…" onSelect={pickProduct}
-              renderSub={p => `${p.unit_price.toLocaleString('fr-FR')} F${p.unit ? ' / ' + p.unit : ''} · Stock: ${p.quantity}`}
-            />
-          </div>
-          <div>
-            <label className={labelCls}>Quantité</label>
-            <input type="number" min="1" value={prodQty} onChange={e => setProdQty(Math.max(1, Number(e.target.value)))} className={inputCls} />
-          </div>
-        </div>
-      )}
-
-      {/* Désignation — produit et libre seulement */}
-      {mode !== 'prestation' && (
+      {/* Désignation — écriture libre */}
+      {mode === 'libre' && (
         <div>
-          <label className={labelCls}>Désignation {mode === 'libre' ? '*' : '(auto-remplie)'}</label>
-          <input value={label} onChange={e => setLabel(e.target.value)} required={mode === 'libre'} className={inputCls}
-            placeholder={mode === 'produit' ? 'Sélectionnez un produit ci-dessus' : 'Ex: Massage détente'} />
+          <label className={labelCls}>Désignation *</label>
+          <input value={label} onChange={e => setLabel(e.target.value)} required className={inputCls}
+            placeholder="Ex: Massage détente" />
         </div>
       )}
 
       {/* Prix + type */}
       <div className="grid grid-cols-2 gap-3">
-        {mode !== 'prestation' && (
+        {mode === 'libre' && (
           <div>
-            <label className={labelCls}>Prix unitaire (F) *</label>
+            <label className={labelCls}>Montant (F) *</label>
             <input type="number" min="0" value={amount} onChange={e => setAmount(e.target.value)} className={inputCls} placeholder="0" />
           </div>
         )}
-        {mode === 'produit' && (
-          <div>
-            <label className={labelCls}>Total</label>
-            <div className="rounded-md border border-stone-200 bg-stone-50 px-3 py-2 text-sm font-semibold text-slate-900">
-              {totalAmount.toLocaleString('fr-FR')} F
-            </div>
-          </div>
-        )}
-        {mode !== 'produit' && (
-          <div className={mode === 'prestation' ? 'col-span-2' : ''}>
-            <label className={labelCls}>Type</label>
-            <select value={txType} onChange={e => setTxType(e.target.value as 'recette' | 'charge')} className={inputCls}>
-              <option value="recette">Recette</option>
-              <option value="charge">Charge</option>
-            </select>
-          </div>
-        )}
+        <div className={mode === 'vente' ? 'col-span-2' : ''}>
+          <label className={labelCls}>Type</label>
+          <select value={txType} onChange={e => setTxType(e.target.value as 'recette' | 'charge')} className={inputCls}>
+            <option value="recette">Recette</option>
+            <option value="charge">Charge</option>
+          </select>
+        </div>
       </div>
 
       {/* Paiement */}

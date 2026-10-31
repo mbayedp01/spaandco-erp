@@ -3,6 +3,7 @@ export interface LineItem {
   price: number | null
   qty: number
   performers: string[]
+  kind?: 'service' | 'product'
 }
 
 export function splitClientLabel(raw: string | null): { client: string; designation: string } {
