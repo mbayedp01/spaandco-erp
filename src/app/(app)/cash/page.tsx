@@ -6,7 +6,7 @@ import { getServices } from '@/lib/db/services'
 import { getInventory } from '@/lib/db/inventory'
 import { getStaff } from '@/lib/db/staff'
 import { getCurrentSpaId } from '@/lib/spa'
-import { getCurrentUserRole } from '@/lib/user-role'
+import { getCurrentUserRole, getCurrentUserIdentity } from '@/lib/user-role'
 import { cn } from '@/lib/utils'
 import { TrendingUp, TrendingDown, Wallet } from 'lucide-react'
 import { AddTransactionButton, AddExpenseButton } from '@/components/forms/transaction-form'
@@ -71,12 +71,14 @@ export default async function CashPage({
   const params = await searchParams
   const role   = await getCurrentUserRole()
   const isCaissier = role === 'caissier'
+  const identity = isCaissier ? await getCurrentUserIdentity() : null
   const isAdmin    = role === 'admin'
 
   // Un caissier ne voit que la caisse du jour (recettes + dépenses)
   const period   = isCaissier ? 'today' : (params.period ?? 'all')
   const type     = params.type ?? 'all'
-  const caissier = isCaissier ? 'all'   : (params.caissier ?? 'all')
+  // Un caissier ne voit que ses propres écritures
+  const caissier = isCaissier ? (identity?.label ?? 'all') : (params.caissier ?? 'all')
   const dateFrom = params.from ?? ''
   const dateTo   = params.to ?? ''
 
@@ -101,7 +103,7 @@ export default async function CashPage({
   }
 
   const today = new Date().toISOString().split('T')[0]
-  const todayTx = allTransactions.filter((t) => t.date === today)
+  const todayTx = applyFilters(allTransactions, 'today', 'all', caissier)
 
   const totalEnc = transactions.filter((t) => t.type === 'recette').reduce((s, t) => s + t.amount, 0)
   const totalDep = transactions.filter((t) => t.type === 'charge').reduce((s, t) => s + t.amount, 0)

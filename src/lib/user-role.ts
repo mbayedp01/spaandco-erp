@@ -30,3 +30,14 @@ export async function getCurrentUserSpaId(): Promise<string | null> {
   const { data: { user } } = await supabase.auth.getUser()
   return (user?.user_metadata?.spa_id as string | undefined) ?? null
 }
+
+// Same identity the cash action stores in cash_transactions.created_by.
+export async function getCurrentUserIdentity(): Promise<{ label: string; email: string | null } | null> {
+  const IS_DEV_BYPASS = process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_DEV_BYPASS === 'true'
+  if (IS_DEV_BYPASS) return null
+
+  const supabase = createServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const label = (user?.user_metadata?.name as string | undefined) ?? user?.email
+  return label ? { label, email: user?.email ?? null } : null
+}

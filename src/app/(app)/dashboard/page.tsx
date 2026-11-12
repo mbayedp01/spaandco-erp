@@ -6,7 +6,7 @@ import { getTodayAppointments } from '@/lib/db/appointments'
 import { getRecentAuditLogs } from '@/lib/db/audit'
 import { getStaff } from '@/lib/db/staff'
 import { getCurrentSpaId } from '@/lib/spa'
-import { getCurrentUserRole } from '@/lib/user-role'
+import { getCurrentUserRole, getCurrentUserIdentity } from '@/lib/user-role'
 import { cn } from '@/lib/utils'
 import {
   CalendarDays, Users, UserCheck, TrendingUp, TrendingDown,
@@ -47,12 +47,14 @@ function formatDelta(current: number, previous: number): { delta: string; trend:
 
 export default async function DashboardPage() {
   const spaId = await getCurrentSpaId()
-  const [stats, todayAppointments, staff, recentLogs, role] = await Promise.all([
+  const role = await getCurrentUserRole()
+  // Le caissier ne voit que ses propres actions dans « Activités récentes »
+  const ownEmail = role === 'caissier' ? (await getCurrentUserIdentity())?.email ?? null : null
+  const [stats, todayAppointments, staff, recentLogs] = await Promise.all([
     getDashboardStats(spaId),
     getTodayAppointments(spaId),
     getStaff(spaId),
-    getRecentAuditLogs(8, spaId),
-    getCurrentUserRole(),
+    getRecentAuditLogs(8, spaId, ownEmail),
   ])
 
   const activeStaff = staff.filter(s => s.status === 'active').length

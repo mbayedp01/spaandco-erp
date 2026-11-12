@@ -3,7 +3,7 @@ import type { AuditLogEntry } from '@/lib/audit-types'
 
 export type { AuditLogEntry }
 
-export async function getRecentAuditLogs(limit = 20, spaId?: string | null): Promise<AuditLogEntry[]> {
+export async function getRecentAuditLogs(limit = 20, spaId?: string | null, actorEmail?: string | null): Promise<AuditLogEntry[]> {
   try {
     const supabase = createServerClient()
     let q = (supabase.from('audit_log') as any)
@@ -11,6 +11,7 @@ export async function getRecentAuditLogs(limit = 20, spaId?: string | null): Pro
       .order('created_at', { ascending: false })
       .limit(limit)
     if (spaId) q = q.eq('spa_id', spaId)
+    if (actorEmail) q = q.eq('actor_email', actorEmail)
     const { data, error } = await q
     if (error) {
       console.error('getRecentAuditLogs:', error.message)
