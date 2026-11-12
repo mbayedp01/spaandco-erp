@@ -30,7 +30,7 @@ const ROLE_ROUTES: Record<UserRole, string[]> = {
   caissier: CAISSIER_ROUTES,
   // Comptable : tous les accès du caissier + la comptabilité et les rapports
   comptable: [...CAISSIER_ROUTES, 'staff', 'accounting', 'reports'],
-  stock: ['inventory'],
+  stock: ['inventory', 'suppliers'],
 }
 
 export function canAccess(role: UserRole, path: string): boolean {

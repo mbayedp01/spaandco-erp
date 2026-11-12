@@ -321,9 +321,9 @@ export function UsersView({ users: initial, establishments }: { users: UserProfi
           <div className="flex flex-wrap gap-3">
             {[
               { role: 'admin',     desc: 'Accès complet à toutes les fonctionnalités' },
-              { role: 'caissier',  desc: 'Caisse, stocks, prestations, RDV — restreint à son spa, sans chiffre d\'affaires' },
+              { role: 'caissier',  desc: 'Caisse, stocks, prestations, RDV — restreint à son spa, CA visible seulement en caisse' },
               { role: 'comptable', desc: 'Accès caissier + comptabilité et rapports' },
-              { role: 'stock',     desc: 'Stocks uniquement — un spa ou tous' },
+              { role: 'stock',     desc: 'Stocks et fournisseurs — un spa ou tous' },
             ].map(({ role, desc }) => (
               <div key={role} className="flex items-center gap-2">
                 <span className={cn('rounded-full px-2 py-0.5 text-xs font-medium', getRoleColor(role))}>
