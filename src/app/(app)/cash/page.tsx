@@ -118,7 +118,8 @@ export default async function CashPage({
       <Header title="Caisse du jour" />
       <div className="flex-1 overflow-y-auto p-4 sm:p-6">
 
-        {/* KPIs */}
+        {/* KPIs — masqués pour le caissier (pas d'accès au chiffre d'affaires) */}
+        {!isCaissier && (
         <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
           <div className="flex items-center gap-4 rounded-lg border border-stone-200 bg-white p-5 shadow-xs">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-50">
@@ -148,6 +149,7 @@ export default async function CashPage({
             </div>
           </div>
         </div>
+        )}
 
         {/* Transactions */}
         <div className="rounded-lg border border-stone-200 bg-white shadow-xs">

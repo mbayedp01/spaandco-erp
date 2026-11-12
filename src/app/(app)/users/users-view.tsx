@@ -10,6 +10,7 @@ const ROLE_OPTIONS = [
   { value: 'admin',     label: 'Administrateur', color: 'bg-primary-50 text-primary-700' },
   { value: 'caissier',  label: 'Caissier',       color: 'bg-emerald-50 text-emerald-700' },
   { value: 'comptable', label: 'Comptable',      color: 'bg-blue-50 text-blue-700' },
+  { value: 'stock',     label: 'Gestionnaire de stock', color: 'bg-amber-50 text-amber-700' },
 ]
 
 const inputCls = 'w-full rounded-md border border-stone-200 px-3 py-2 text-sm text-slate-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-primary-500'
@@ -40,7 +41,7 @@ function CreateModal({ onClose, establishments }: { onClose: () => void; establi
     if (form.role === 'caissier' && !form.spa_id) { setError('Sélectionnez un établissement'); return }
     start(async () => {
       try {
-        const spa_id = form.role === 'caissier' ? form.spa_id : undefined
+        const spa_id = form.role === 'caissier' || form.role === 'stock' ? form.spa_id || undefined : undefined
         const res = await createUserAction(form.email, form.name, form.role, form.password, spa_id)
         if (res.error) { setError(res.error); return }
         onClose()
@@ -72,10 +73,11 @@ function CreateModal({ onClose, establishments }: { onClose: () => void; establi
               {ROLE_OPTIONS.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
             </select>
           </div>
-          {form.role === 'caissier' && (
+          {(form.role === 'caissier' || form.role === 'stock') && (
             <div>
-              <label className={labelCls}>Établissement *</label>
+              <label className={labelCls}>Établissement {form.role === 'caissier' ? '*' : ''}</label>
               <select value={form.spa_id} onChange={e => setForm(p => ({ ...p, spa_id: e.target.value }))} className={inputCls}>
+                {form.role === 'stock' && <option value="">Tous les établissements</option>}
                 {establishments.map(e => (
                   <option key={e.id} value={e.id}>{e.name} — {e.city}</option>
                 ))}
@@ -319,8 +321,9 @@ export function UsersView({ users: initial, establishments }: { users: UserProfi
           <div className="flex flex-wrap gap-3">
             {[
               { role: 'admin',     desc: 'Accès complet à toutes les fonctionnalités' },
-              { role: 'caissier',  desc: 'Caisse, stocks, prestations, RDV — restreint à son spa' },
+              { role: 'caissier',  desc: 'Caisse, stocks, prestations, RDV — restreint à son spa, sans chiffre d\'affaires' },
               { role: 'comptable', desc: 'Accès caissier + comptabilité et rapports' },
+              { role: 'stock',     desc: 'Stocks uniquement — un spa ou tous' },
             ].map(({ role, desc }) => (
               <div key={role} className="flex items-center gap-2">
                 <span className={cn('rounded-full px-2 py-0.5 text-xs font-medium', getRoleColor(role))}>

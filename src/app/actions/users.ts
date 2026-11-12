@@ -5,6 +5,7 @@ import { createServerClient } from '@/lib/supabase/server'
 import { getCurrentUserRole } from '@/lib/user-role'
 import { updateUserProfile } from '@/lib/db/users'
 import { logCurrentAction } from '@/lib/audit'
+import { ROLE_LABELS } from '@/lib/roles'
 
 async function isAdmin(): Promise<boolean> {
   const role = await getCurrentUserRole()
@@ -16,6 +17,20 @@ export async function updateUserRoleAction(
   role: string,
 ): Promise<{ error?: string }> {
   if (!(await isAdmin())) return { error: 'Permission refusée' }
+  if (!(role in ROLE_LABELS)) return { error: 'Rôle invalide' }
+
+  // Permissions are read from auth user_metadata, not user_profiles.
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+  const resp = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/admin/users/${userId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${serviceKey}`, apikey: serviceKey },
+    body: JSON.stringify({ user_metadata: { role } }),
+  })
+  if (!resp.ok) {
+    const json = await resp.json().catch(() => ({}))
+    return { error: json?.msg || json?.message || `Erreur ${resp.status}` }
+  }
+
   const result = await updateUserProfile(userId, { role })
   if (result.error) return { error: result.error }
   await logCurrentAction({ action: 'updated', entity_type: 'user', entity_name: `Rôle → ${role}`, spa_id: null })

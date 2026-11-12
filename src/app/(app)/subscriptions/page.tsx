@@ -56,6 +56,7 @@ export default async function SubscriptionsPage() {
               <p className="text-2xl font-bold text-slate-900">{activeCount}</p>
             </div>
           </div>
+          {role !== 'caissier' && (
           <div className="flex items-center gap-4 rounded-lg border border-stone-200 bg-white p-5 shadow-xs">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-50">
               <TrendingUp className="h-5 w-5 text-emerald-600" />
@@ -66,6 +67,7 @@ export default async function SubscriptionsPage() {
               <p className="text-xs text-stone-400">par mois</p>
             </div>
           </div>
+          )}
           <div className="rounded-lg border border-stone-200 bg-white p-5 shadow-xs">
             <p className="text-sm text-stone-500">Répartition plans</p>
             <div className="mt-2 space-y-1.5">

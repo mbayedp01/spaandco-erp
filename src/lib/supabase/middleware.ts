@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import type { Database } from './types'
-import { canAccess, type UserRole } from '@/lib/roles'
+import { canAccess, getDefaultRoute, type UserRole } from '@/lib/roles'
 
 export async function updateSession(request: NextRequest) {
   const IS_PLACEHOLDER = process.env.NEXT_PUBLIC_SUPABASE_URL?.includes('placeholder')
@@ -30,6 +30,7 @@ export async function updateSession(request: NextRequest) {
   )
 
   const { data: { user } } = await supabase.auth.getUser()
+  const role = ((user?.user_metadata?.role as UserRole) ?? 'admin')
 
   const isProtected = request.nextUrl.pathname.startsWith('/dashboard') ||
     request.nextUrl.pathname.startsWith('/clients') ||
@@ -54,16 +55,14 @@ export async function updateSession(request: NextRequest) {
 
   if (user && request.nextUrl.pathname === '/login') {
     const url = request.nextUrl.clone()
-    url.pathname = '/dashboard'
+    url.pathname = getDefaultRoute(role)
     return NextResponse.redirect(url)
   }
 
-  // Role-based access control — redirect to /dashboard if route is forbidden
   if (user && isProtected) {
-    const role = ((user.user_metadata?.role as UserRole) ?? 'admin')
     if (!canAccess(role, request.nextUrl.pathname)) {
       const url = request.nextUrl.clone()
-      url.pathname = '/dashboard'
+      url.pathname = getDefaultRoute(role)
       return NextResponse.redirect(url)
     }
   }

@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { LayoutDashboard, Users, CalendarDays, CreditCard, MoreHorizontal, Stethoscope } from 'lucide-react'
+import { LayoutDashboard, Users, CalendarDays, CreditCard, MoreHorizontal, Stethoscope, Package } from 'lucide-react'
 import { useState } from 'react'
 import { getNavItemsForRole } from './nav-items'
 import { SpaSwitcher } from './spa-switcher'
@@ -16,6 +16,7 @@ const ALL_PRIMARY_TABS = [
   { label: 'RDV',     href: '/appointments',  icon: CalendarDays,    roles: ['admin','caissier','comptable','medecin'] },
   { label: 'Caisse',  href: '/cash',          icon: CreditCard,      roles: ['admin','caissier','comptable'] },
   { label: 'Soins',   href: '/services',      icon: Stethoscope,     roles: ['medecin'] },
+  { label: 'Stocks',  href: '/inventory',     icon: Package,         roles: ['stock'] },
 ] as const
 
 export function BottomNav() {

@@ -58,15 +58,15 @@ export default async function DashboardPage() {
   const activeStaff = staff.filter(s => s.status === 'active').length
   const caGrowth = formatDelta(stats.revenueMonth, stats.prevMonthRevenue)
 
-  // Le caissier et le comptable voient le CA du jour (comme en caisse) au lieu du CA du mois
+  // Le caissier ne voit aucun chiffre d'affaires ; le comptable voit le CA du jour
   const isCaissier   = role === 'caissier'
-  const showDailyCa  = role === 'caissier' || role === 'comptable'
+  const showDailyCa  = role === 'comptable'
   const caKpi = showDailyCa
     ? { label: 'CA du jour', value: `${stats.revenueToday.toLocaleString('fr-FR')} F`, delta: 'Encaissements du jour', trend: 'neutral' as const, sub: "Aujourd'hui" }
     : { label: 'CA du mois', value: `${stats.revenueMonth.toLocaleString('fr-FR')} F`, ...caGrowth, sub: 'vs mois précédent' }
 
   const kpis = [
-    caKpi,
+    ...(isCaissier ? [] : [caKpi]),
     { label: 'Rendez-vous du jour', value: String(stats.totalAppointmentsToday), delta: `${stats.confirmedToday} confirmés`, trend: 'neutral' as const },
     { label: 'Nouveaux clients', value: String(stats.newClientsThisMonth), delta: `${stats.totalClients} total`, trend: 'neutral' as const, sub: 'Ce mois' },
     { label: 'Abonnements actifs', value: String(stats.activeSubscriptions), delta: '', trend: 'neutral' as const },
@@ -78,7 +78,7 @@ export default async function DashboardPage() {
       <div className="flex-1 overflow-y-auto p-6">
 
         {/* ── KPIs ──────────────────────────────────────────────────────────── */}
-        <div className="grid gap-3 sm:gap-4 grid-cols-2 xl:grid-cols-4">
+        <div className={cn('grid gap-3 sm:gap-4 grid-cols-2', isCaissier ? 'xl:grid-cols-3' : 'xl:grid-cols-4')}>
           {kpis.map(kpi => <KpiCard key={kpi.label} kpi={kpi} />)}
         </div>
 
@@ -126,8 +126,9 @@ export default async function DashboardPage() {
         </div>
 
         {/* ── Charts ────────────────────────────────────────────────────────── */}
-        <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className={cn('mt-6 grid grid-cols-1 gap-4', !isCaissier && 'lg:grid-cols-3')}>
           {/* Revenue chart */}
+          {!isCaissier && (
           <div className="rounded-lg border border-stone-200 bg-white p-5 shadow-xs lg:col-span-2">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="font-semibold text-slate-900">Chiffre d&apos;affaires vs Dépenses</h2>
@@ -156,6 +157,7 @@ export default async function DashboardPage() {
               </div>
             </div>
           </div>
+          )}
 
           {/* Top services */}
           <div className="rounded-lg border border-stone-200 bg-white p-5 shadow-xs">
