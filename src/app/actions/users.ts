@@ -1,11 +1,19 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { createServerClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentUserRole } from '@/lib/user-role'
 import { updateUserProfile } from '@/lib/db/users'
 import { logCurrentAction } from '@/lib/audit'
 import { ROLE_LABELS } from '@/lib/roles'
+
+function adminApiError(status: number, json: any): string {
+  const msg: string = json?.msg || json?.message || json?.error_description || ''
+  if (status === 401 || /invalid api key/i.test(msg)) {
+    return 'Clé d\'administration Supabase invalide sur le serveur (variable SUPABASE_SERVICE_ROLE_KEY). Mettez-la à jour dans la configuration de l\'hébergement puis redéployez.'
+  }
+  return msg || `Erreur ${status}`
+}
 
 async function isAdmin(): Promise<boolean> {
   const role = await getCurrentUserRole()
@@ -28,7 +36,7 @@ export async function updateUserRoleAction(
   })
   if (!resp.ok) {
     const json = await resp.json().catch(() => ({}))
-    return { error: json?.msg || json?.message || `Erreur ${resp.status}` }
+    return { error: adminApiError(resp.status, json) }
   }
 
   const result = await updateUserProfile(userId, { role })
@@ -81,11 +89,8 @@ export async function createUserAction(
     }),
   })
 
-  const json = await resp.json()
-  if (!resp.ok) {
-    const msg = json?.msg || json?.message || json?.error_description || `Erreur ${resp.status}`
-    return { error: msg }
-  }
+  const json = await resp.json().catch(() => ({}))
+  if (!resp.ok) return { error: adminApiError(resp.status, json) }
 
   const userId: string | undefined = json?.id
   if (!userId) return { error: 'Création échouée — aucun utilisateur retourné' }
@@ -93,14 +98,15 @@ export async function createUserAction(
   const data = { user: { id: userId } }
 
   // Upsert dans user_profiles pour garantir rôle et nom corrects
-  const supabase = createServerClient()
-  await (supabase.from('user_profiles') as any).upsert({
+  const supabase = createAdminClient()
+  const { error: profileError } = await (supabase.from('user_profiles') as any).upsert({
     id: data.user.id,
     email,
     name,
     role,
     status: 'actif',
   })
+  if (profileError) console.error('createUserAction profile:', profileError.message)
 
   await logCurrentAction({ action: 'created', entity_type: 'user', entity_name: `${name} (${role})`, spa_id: null })
   revalidatePath('/settings')
