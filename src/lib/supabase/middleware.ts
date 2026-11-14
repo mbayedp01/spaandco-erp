@@ -32,20 +32,11 @@ export async function updateSession(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   const role = ((user?.user_metadata?.role as UserRole) ?? 'admin')
 
-  const isProtected = request.nextUrl.pathname.startsWith('/dashboard') ||
-    request.nextUrl.pathname.startsWith('/clients') ||
-    request.nextUrl.pathname.startsWith('/appointments') ||
-    request.nextUrl.pathname.startsWith('/services') ||
-    request.nextUrl.pathname.startsWith('/staff') ||
-    request.nextUrl.pathname.startsWith('/planning') ||
-    request.nextUrl.pathname.startsWith('/inventory') ||
-    request.nextUrl.pathname.startsWith('/suppliers') ||
-    request.nextUrl.pathname.startsWith('/cash') ||
-    request.nextUrl.pathname.startsWith('/accounting') ||
-    request.nextUrl.pathname.startsWith('/marketing') ||
-    request.nextUrl.pathname.startsWith('/reports') ||
-    request.nextUrl.pathname.startsWith('/subscriptions') ||
-    request.nextUrl.pathname.startsWith('/settings')
+  // Tout est protégé sauf ces chemins publics (connexion, kiosque client, ping).
+  const PUBLIC_PATHS = ['/login', '/kiosque', '/api/ping']
+  const path = request.nextUrl.pathname
+  const isPublic = PUBLIC_PATHS.some(p => path === p || path.startsWith(p + '/'))
+  const isProtected = !isPublic
 
   if (!user && isProtected) {
     const url = request.nextUrl.clone()

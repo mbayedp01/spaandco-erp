@@ -7,7 +7,9 @@ export async function getCurrentUserRole(): Promise<UserRole> {
 
   const supabase = createServerClient()
   const { data: { user } } = await supabase.auth.getUser()
-  const role = user?.user_metadata?.role as UserRole | undefined
+  // Visiteur non connecté : jamais administrateur, le rôle le moins privilégié.
+  if (!user) return 'stock'
+  const role = user.user_metadata?.role as UserRole | undefined
   return role ?? 'admin'
 }
 
